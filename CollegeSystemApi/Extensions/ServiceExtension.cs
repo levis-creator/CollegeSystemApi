@@ -12,7 +12,7 @@ using System;
 using System.Text;
 namespace CollegeSystemApi.Extensions;
 
-public static class DependencyInjection
+public static class ServiceExtension
 {
     public static IServiceCollection AddDataseConfiguration(this IServiceCollection services, string connectionString)
     {
@@ -83,7 +83,9 @@ public static class DependencyInjection
         return services;
     }
     public static IServiceCollection AddServices(this IServiceCollection services) {
+        services.AddScoped(typeof(IGenericServices<>), typeof(GenericServices<>));
         services.AddScoped<IAuthService, AuthService>();
+       
         return services;
     }
 }

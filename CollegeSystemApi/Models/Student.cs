@@ -1,19 +1,15 @@
 ﻿using CollegeSystemApi.Models.Common;
-using System.ComponentModel.DataAnnotations;
+using Microsoft.EntityFrameworkCore;
 
-namespace CollegeSystemApi.Models
+namespace CollegeSystemApi.Models;
+
+public class Student:BaseEntity
 {
-    public class Student:BaseEntity
-    {
-        public string Firstname { get; set; } = string.Empty;
-        public string Lastname { get; set; } = string.Empty;
-        [Phone]
-        public string Phone { get; set; } = string.Empty;
-        [EmailAddress]
-        public string Email { get; set; } = string.Empty;
-        public int NationalId { get; set; }
-        public string AdmissionNo { get; set; } = string.Empty;
-        public int? DepartmentId { get; set; }
-        public Department? Department { get; set; }
-    }
+    public int NationalId { get; set; }
+    public int? DepartmentId { get; set; }
+    public string UserId { get; set; }= string.Empty;
+    public AppUser User { get; set; }
+    public Department? Department { get; set; }
+    public string AdmNo { get; set; } = string.Empty;
+    public bool IsActive { get; set; } = true;
 }

@@ -4,105 +4,74 @@ using CollegeSystemApi.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 
-namespace CollegeSystemApi.Services;
-
-public class GenericServices<T> : IGenericServices<T> where T : class
+namespace CollegeSystemApi.Services
 {
-    protected readonly ApplicationDbContext _context;
-    protected readonly DbSet<T> _dbSet;
-
-    public GenericServices(ApplicationDbContext context)
+    public class GenericServices<T> : IGenericServices<T> where T : class
     {
-        _context = context;
-        _dbSet = context.Set<T>();
-    }
+        protected readonly ApplicationDbContext _context;
+        protected readonly DbSet<T> _dbSet;
 
-    public virtual async Task<ResponseDto<T>> AddAsync(T entity)
-    {
-        var result = await _dbSet.AddAsync(entity);
-        await _context.SaveChangesAsync();
-
-        return new ResponseDto<T>
+        public GenericServices(ApplicationDbContext context, IHttpContextAccessor httpContextAccessor)
         {
-            Data = entity,
-            StatusCode = 200,
-            Message = "Success"
-        };
-    }
+            _context = context;
+            _dbSet = context.Set<T>();
+        }
 
-    public virtual async Task<ResponseDto<T>> Delete(T entity)
-    {
-        _context.Entry(entity).State = EntityState.Deleted;
-        await _context.SaveChangesAsync();
-
-        return new ResponseDto<T>
+        // Add a new entity and return a ResponseDto<T> with success message
+        public virtual async Task<ResponseDto<T>> AddAsync(T entity)
         {
-            StatusCode = 200,
-            Message = "Deleted successfully"
-        };
-    }
+            await _dbSet.AddAsync(entity);
+            await _context.SaveChangesAsync();
+            return ResponseDto<T>.SuccessResultForData(entity, "Successfully added.");
+        }
 
-    public virtual async Task<ResponseDto<IEnumerable<T>>> FindAsync(Expression<Func<T, bool>> predicate)
-    {
-        var results = await _dbSet.AsNoTracking().Where(predicate).ToListAsync();
-        if (results == null || !results.Any())
-            return new ResponseDto<IEnumerable<T>>
-            {
-                StatusCode = 404,
-                Message = "Data not found"
-            };
-
-        return new ResponseDto<IEnumerable<T>>
+        // Delete an entity and return a ResponseDto<T> indicating success or failure
+        public virtual async Task<ResponseDto> Delete(T entity)
         {
-            Data = results,
-            StatusCode = 200,
-            Message = "Success"
-        };
-    }
+            _context.Entry(entity).State = EntityState.Deleted;
+            await _context.SaveChangesAsync();
+            return ResponseDto.SuccessResult(null, "Successfully deleted.");
+        }
 
-    public virtual async Task<ResponseDto<IEnumerable<T>>> GetAllAsync()
-    {
-        var results = await _dbSet.AsNoTracking().ToListAsync();
-        return new ResponseDto<IEnumerable<T>>
+        // Find entities based on a predicate and return a ResponseDto<List<T>> 
+        public virtual async Task<ResponseDto<T>> FindAsync(Expression<Func<T, bool>> predicate)
         {
-            Data = results,
-            Message = "Success",
-            StatusCode = 200
-        };
-    }
+            var results = await _dbSet.AsNoTracking().Where(predicate).ToListAsync();
+            if (!results.Any())
+                return ResponseDto<T>.ErrorResultForList(404, "Data not found", results);
 
-    public virtual async Task<ResponseDto<T>> GetByIdAsync(int id)
-    {
-        var result = await _dbSet.FindAsync(id);
-        if (result == null)
-            return new ResponseDto<T>
-            {
-                StatusCode = 404,
-                Message = "Data not found"
-            };
+            return ResponseDto<T>.SuccessResultForList(results, "Data found.");
+        }
 
-        return new ResponseDto<T>
+        // Get all entities and return a ResponseDto<List<T>> 
+        public virtual async Task<ResponseDto<T>> GetAllAsync()
         {
-            Data = result,
-            StatusCode = 200,
-            Message = "Success"
-        };
-    }
+            var results = await _dbSet.AsNoTracking().ToListAsync();
+            return ResponseDto<T>.SuccessResultForList(results, "Data retrieved successfully.");
+        }
 
-    public virtual async Task<ResponseDto<T>> Update(T entity)
-    {
-        _context.Entry(entity).State = EntityState.Modified;
-        await _context.SaveChangesAsync();
-
-        return new ResponseDto<T>
+        // Get an entity by its ID and return a ResponseDto<T> 
+        public virtual async Task<ResponseDto<T>> GetByIdAsync(int id)
         {
-            StatusCode = 200,
-            Message = "Updated Successfully!"
-        };
-    }
+            var result = await _dbSet.FindAsync(id);
+            if (result == null)
+                return ResponseDto<T>.ErrorResultForData(404, "Item not found.", null);
 
-    public virtual async Task<int> SaveChangesAsync()
-    {
-        return await _context.SaveChangesAsync();
+            return ResponseDto<T>.SuccessResultForData(result, "Item found.");
+        }
+
+        // Update an entity and return a ResponseDto<T> indicating success or failure
+        public virtual async Task<ResponseDto<T>> Update(T entity)
+        {
+            _context.Entry(entity).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+            return ResponseDto<T>.SuccessResultForData(entity, "Successfully updated.");
+        }
+
+        // Save changes and return the number of affected rows
+        public virtual async Task<int> SaveChangesAsync()
+        {
+            return await _context.SaveChangesAsync();
+        }
     }
 }

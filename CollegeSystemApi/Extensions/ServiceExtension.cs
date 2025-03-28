@@ -4,6 +4,7 @@ using CollegeSystemApi.Models;
 using CollegeSystemApi.Models.Common;
 using CollegeSystemApi.Services;
 using CollegeSystemApi.Services.Interfaces;
+using CollegeSystemApi.Services.Interfaces.StudentServices;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -82,10 +83,27 @@ public static class ServiceExtension
         services.AddAuthorization();
         return services;
     }
-    public static IServiceCollection AddServices(this IServiceCollection services) {
+    public static IServiceCollection AddServices(this IServiceCollection services)
+    {
         services.AddScoped(typeof(IGenericServices<>), typeof(GenericServices<>));
         services.AddScoped<IAuthService, AuthService>();
-       
+        services.AddScoped<IUserManagementService, UserManagementService>();
+        services.AddScoped<IDepartmentService, DepartmentService>();
+        //services.AddScoped<IStudentCrudService, StudentCrudService>();
+        //services.AddScoped<IStudentOperationsService, StudentOperationsService>();
+
         return services;
     }
+    public static IServiceCollection AddCorsConfiguration(this IServiceCollection services)
+    {
+        services.AddCors(options =>
+        {
+            options.AddPolicy("AllowAll", policy =>
+                policy.AllowAnyOrigin()
+                      .AllowAnyHeader()
+                      .AllowAnyMethod());
+        });
+        return services;
+    }
+
 }

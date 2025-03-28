@@ -1,65 +1,66 @@
-﻿using System.Collections.Generic;
-using System.Text;
+﻿using System;
+using System.Collections.Generic;
+using System.Text.Json;
 
-namespace CollegeSystemApi.DTOs;
-
-public  class ResponseDto<T> where T : class?
+namespace CollegeSystemApi.DTOs
 {
-    public int StatusCode { get; set; }
-    public string? Message { get; set; }
-
-    // Backing field for data
-    private object? _data;
-
-    // Property to get or set data as a single item or a list
-    public object? Data
+    // Non-generic base class for general response handling
+    public class ResponseDto
     {
-        get => _data;
-        set
+        public bool Success { get; set; }
+        public int StatusCode { get; set; }
+        public string? Message { get; set; }
+        public object? Data { get; set; }
+
+        public ResponseDto(bool success, int statusCode, string? message = null, object? data = null)
         {
-            if (value is T || value is List<T> || value == null)
-            {
-                _data = value;
-            }
-            else
-            {
-                throw new ArgumentException("Data must be of type T or List<T>.");
-            }
+            Success = success;
+            StatusCode = statusCode;
+            Message = message;
+            Data = data;
         }
+
+        // Static factory method for success response
+        public static ResponseDto SuccessResult(object? data = null, string? message = null, int statusCode = 200)
+            => new ResponseDto(true, statusCode, message, data);
+
+        // Static factory method for error response
+        public static ResponseDto ErrorResult(int statusCode, string message, object? data = null)
+            => new ResponseDto(false, statusCode, message, data);
+
+        public virtual string ToJson() => JsonSerializer.Serialize(this);
     }
 
-    // Override ToString to provide a meaningful representation
-    public override string ToString()
+    // Generic subclass for strongly-typed responses
+    public class ResponseDto<T> : ResponseDto
     {
-        var sb = new StringBuilder();
+        // New data and items properties specific to type T
+        public new T? Data { get; set; }
+        public List<T>? Items { get; set; }
 
-        // Append StatusCode if it has a value
-        sb.AppendLine($"StatusCode: {StatusCode}");
-
-        // Append Message only if it's not null or empty
-        if (!string.IsNullOrEmpty(Message))
+        public ResponseDto(bool success, int statusCode, string? message = null, T? data = default, List<T>? items = null)
+            : base(success, statusCode, message, data)
         {
-            sb.AppendLine($"Message: {Message}");
+            Data = data;
+            Items = items;
         }
 
-        // Append Data only if it's not null
-        if (_data != null)
-        {
-            if (_data is T singleItem)
-            {
-                sb.AppendLine("Data (Single Item):");
-                sb.AppendLine(singleItem.ToString());
-            }
-            else if (_data is List<T> list)
-            {
-                sb.AppendLine("Data (List):");
-                foreach (var item in list)
-                {
-                    sb.AppendLine(item?.ToString());
-                }
-            }
-        }
+        // Factory method for **a single object**
+        public static ResponseDto<T> SuccessResultForData(T data, string? message = "Success", int statusCode = 200)
+            => new ResponseDto<T>(true, statusCode, message, data);
 
-        return sb.ToString();
+        // Factory method for **a list of objects**
+        public static ResponseDto<T> SuccessResultForList(List<T> items, string? message = "Success", int statusCode = 200)
+            => new ResponseDto<T>(true, statusCode, message, default, items);
+
+        // Error result for a single object
+        public static ResponseDto<T> ErrorResultForData(int statusCode, string message, T? data = default)
+            => new ResponseDto<T>(false, statusCode, message, data);
+
+        // Error result for a list of objects
+        public static ResponseDto<T> ErrorResultForList(int statusCode, string message, List<T>? items = null)
+            => new ResponseDto<T>(false, statusCode, message, default, items);
+
+        public override string ToJson() => JsonSerializer.Serialize(this);
     }
 }

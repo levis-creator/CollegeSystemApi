@@ -71,7 +71,7 @@ namespace CollegeSystemApi.Controllers
             if (entity.Data == null)
                 return NotFound("Entity not found");
 
-            var result = await _genericService.Delete((T)entity.Data);
+            var result = await _genericService.Delete(entity.Data);
             if (result.StatusCode == 200)
                 return Ok(result);
             return StatusCode(500, result);

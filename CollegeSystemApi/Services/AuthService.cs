@@ -5,6 +5,8 @@ using CollegeSystemApi.Services.Interfaces;
 using CollegeSystemApi.Helper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
+using System;
+using System.Threading.Tasks;
 
 
 namespace CollegeSystemApi.Services;
@@ -65,6 +67,7 @@ public class AuthService : IAuthService
             _jwtSettings
             );
         return new AuthResponse(
+            id: user.Id,
             success: true,
             message: "Authentication Successful",
             token: token,
@@ -91,6 +94,25 @@ public class AuthService : IAuthService
         await _userManager.AddToRoleAsync(newUser, "Student");
 
         return new AuthResponse(true, "User created successfully");
+    }
+    public Task<AuthResponse> VerifyTokenAsync(string token)
+    {
+        return Task.FromResult(TokenHelper.VerifyToken(token, _jwtSettings));
+    }
+    public async Task<CurrentUserDto?> GetLoggedOnUserAsync(string userId)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+            return null;
+        var userRoles = await _userManager.GetRolesAsync(user);
+        return new CurrentUserDto
+        {
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email!,
+            PhoneNumber = user.PhoneNumber!,
+            Role = userRoles.FirstOrDefault()!
+        };
     }
     private static string GetErrors(IEnumerable<IdentityError> errors)
     => string.Join(", ", errors.Select(e => e.Description));

@@ -9,5 +9,7 @@ namespace CollegeSystemApi.Services.Interfaces
         Task<AuthResponse> LoginUserAsync(DTOs.Auth.LoginRequestDto request);
         Task<AuthResponse> CreateRoleAsync(RoleRequestDto request, string currentUserId);
         Task<AuthResponse> AddUserToRoleAsync(string email, string roleName);
+        Task<AuthResponse> VerifyTokenAsync(string token);
+        Task<CurrentUserDto?> GetLoggedOnUserAsync(string userId);
     }
 }

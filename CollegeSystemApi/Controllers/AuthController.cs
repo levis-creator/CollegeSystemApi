@@ -2,6 +2,7 @@
 using CollegeSystemApi.DTOs.Auth;
 using CollegeSystemApi.Models;
 using CollegeSystemApi.Models.Common;
+using CollegeSystemApi.Services;
 using CollegeSystemApi.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -55,5 +56,31 @@ public class AuthController : ControllerBase
         return result.Success
         ? Ok(result)
             : BadRequest(result);
+    }
+    [HttpPost("Verify")]
+    public async Task<IActionResult> Verify([FromBody] string token)
+    {
+        var results = await authService.VerifyTokenAsync(token);
+        return results.Success ? Ok(results) : Unauthorized(results);
+    }
+    [Authorize]
+    [HttpGet("User")]
+    public async Task<IActionResult> CurrentUser([FromQuery]string userId)
+    {
+        var loggedInUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (loggedInUserId == null || loggedInUserId != userId)
+        {
+            return Unauthorized(new { message = "Unauthorized access" });
+        }
+
+        var user = await authService.GetLoggedOnUserAsync(userId);
+
+        if (user == null)
+        {
+            return NotFound(new { message = "User not found" });
+        }
+
+        return Ok(user);
     }
 }

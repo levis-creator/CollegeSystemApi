@@ -16,6 +16,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 // Add services to the container.
 builder.Services.AddDataseConfiguration(connectionString);
 builder.Services.AddIdentityConfiguration(builder.Configuration);
+builder.Services.AddCorsConfiguration();
 builder.Services.AddServices();
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -82,7 +83,7 @@ app.UseSwaggerUI(c =>
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
-
+app.UseCors("AllowAll");
 app.MapControllers();
 
 using (var scope = app.Services.CreateScope())

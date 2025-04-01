@@ -1,260 +1,407 @@
-﻿//using CollegeSystemApi.Data;
-//using CollegeSystemApi.DTOs.Student;
-//using CollegeSystemApi.DTOs;
-//using CollegeSystemApi.Models;
-//using Microsoft.AspNetCore.Identity;
-//using System.Net;
-//using Microsoft.EntityFrameworkCore;
+﻿using System.Net;
+using CollegeSystemApi.Data;
+using CollegeSystemApi.DTOs.Response;
+using CollegeSystemApi.DTOs.Student;
+using CollegeSystemApi.Models;
+using CollegeSystemApi.Services.Interfaces.IStudentServices;
+using Humanizer;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
-//public class StudentCrudService : IStudentCrudService
-//{
-//    private readonly UserManager<AppUser> _userManager;
-//    private readonly ApplicationDbContext _context;
+namespace CollegeSystemApi.Services.StudentServices
+{
+    public class StudentCrudService(
+        UserManager<AppUser> userManager,
+        ApplicationDbContext context,
+        ILogger<StudentCrudService> logger)
+        : IStudentCrudService
+    {
+        public async Task<ResponseDtoData<StudentDto>> CreateStudentAsync(StudentCreateDto studentDto)
+        {
+            try
+            {
+                // Validate input
+                var validationResult = await ValidateStudentCreateDto(studentDto);
+                if (validationResult != null)
+                    return validationResult;
 
-//    public StudentCrudService(
-//        UserManager<AppUser> userManager,
-//        ApplicationDbContext context)
-//    {
-//        _userManager = userManager;
-//        _context = context;
-//    }
+                // Ensure National ID is a valid integer
+                if (!int.TryParse(studentDto.NationalId, out int nationalId))
+                {
+                    return ResponseDtoData<StudentDto>.ErrorResult(
+                        (int)HttpStatusCode.BadRequest,
+                        "Invalid National ID format."
+                    );
+                }
 
-//    public async Task<ResponseDto<StudentDto>> CreateStudentAsync(StudentCreateDto studentDto)
-//    {
-//        try
-//        {
-//            // Validate department exists
-//            var departmentExists = await _context.Departments.AnyAsync(d => d.Id == studentDto.DepartmentId);
-//            if (!departmentExists)
-//            {
-//                return (ResponseDto<StudentDto>)ResponseDto<StudentDto>.ErrorResult(
-//                    (int)HttpStatusCode.BadRequest,
-//                    "Specified department does not exist");
-//            }
+                // Check if student already exists
+                bool studentExists = await context.Students.AnyAsync(s => s.NationalId == nationalId);
+                if (studentExists)
+                {
+                    return ResponseDtoData<StudentDto>.ErrorResult(
+                        (int)HttpStatusCode.Conflict,
+                        "A student with this National ID already exists."
+                    );
+                }
 
-//            // Check for duplicate admission number
-//            var studentExistByAdm = await _context.Students.FirstOrDefaultAsync(s => s.AdmNo == studentDto.AdmNo);
-//            if (studentExistByAdm != null)
-//            {
-//                return (ResponseDto<StudentDto>)ResponseDto<StudentDto>.ErrorResult(
-//                    (int)HttpStatusCode.Conflict,
-//                    "Student with this admission number already exists");
-//            }
+                // Validate Department ID
+                bool departmentExists = await context.Departments.AnyAsync(d => d.Id == studentDto.DepartmentId);
+                if (!departmentExists)
+                {
+                    return ResponseDtoData<StudentDto>.ErrorResult(
+                        (int)HttpStatusCode.BadRequest,
+                        "Invalid Department ID."
+                    );
+                }
 
-//            // Check for duplicate email
-//            var userExist = await _userManager.FindByEmailAsync(studentDto.Email);
-//            if (userExist != null)
-//            {
-//                return (ResponseDto<StudentDto>)ResponseDto<StudentDto>.ErrorResult(
-//                    (int)HttpStatusCode.Conflict,
-//                    "User with this email already exists");
-//            }
+                // Create AppUser first
+                var user = new AppUser
+                {
+                    FirstName = studentDto.FirstName.Transform(To.TitleCase),
+                    LastName = studentDto.LastName.Transform(To.TitleCase),
+                    Email = studentDto.Email,
+                    UserName = studentDto.Email,
+                    EmailConfirmed = true
+                };
+                var defaultPassword = $"{user.FirstName}{nationalId}#";
 
-//            // Create new student
-//            var student = new Student
-//            {
-//                FirstName = studentDto.FirstName,
-//                LastName = studentDto.LastName,
-//                Email = studentDto.Email,
-//                UserName = studentDto.Email,
-//                AdmNo = studentDto.AdmNo,
-//                NationalId = int.Parse(studentDto.NationalId),
-//                DepartmentId = studentDto.DepartmentId
-//            };
+                // Create user with National ID as initial password
+                var userResult = await userManager.CreateAsync(user, defaultPassword);
+                if (!userResult.Succeeded)
+                {
+                    logger.LogError("User creation failed: {Errors}", string.Join(", ", userResult.Errors.Select(e => e.Description)));
+                    return ResponseDtoData<StudentDto>.ErrorResult(
+                        (int)HttpStatusCode.BadRequest,
+                        "User creation failed: " + string.Join(", ", userResult.Errors.Select(e => e.Description))
+                    );
+                }
 
-//            // Use National ID as password
-//            var result = await _userManager.CreateAsync(student, studentDto.NationalId);
-//            if (!result.Succeeded)
-//            {
-//                return (ResponseDto<StudentDto>)ResponseDto<StudentDto>.ErrorResult(
-//                    (int)HttpStatusCode.BadRequest,
-//                    string.Join(", ", result.Errors.Select(e => e.Description)));
-//            }
+                // Add student role
+                var roleResult = await userManager.AddToRoleAsync(user, "Student");
+                if (!roleResult.Succeeded)
+                {
+                    logger.LogError("Role assignment failed: {Errors}", string.Join(", ", roleResult.Errors.Select(e => e.Description)));
+                    await userManager.DeleteAsync(user); // Rollback user creation if role assignment fails
+                    return ResponseDtoData<StudentDto>.ErrorResult(
+                        (int)HttpStatusCode.InternalServerError,
+                        "Role assignment failed: " + string.Join(", ", roleResult.Errors.Select(e => e.Description))
+                    );
+                }
 
-//            // Add student to Student role
-//            var roleResult = await _userManager.AddToRoleAsync(student, "Student");
-//            if (!roleResult.Succeeded)
-//            {
-//                await _userManager.DeleteAsync(student);
-//                return (ResponseDto<StudentDto>)ResponseDto<StudentDto>.ErrorResult(
-//                    (int)HttpStatusCode.InternalServerError,
-//                    "Failed to add student to role");
-//            }
+                // Create Student record
+                var student = new Student
+                {
+                    NationalId = nationalId,
+                    DepartmentId = studentDto.DepartmentId,
+                    UserId = user.Id,
+                    AdmNo = studentDto.AdmNo,
+                    IsActive = true
+                };
 
-//            // Return created student
-//            var createdStudent = await _context.Students
-//                .Include(s => s.Department)
-//                .FirstOrDefaultAsync(s => s.Id == student.Id);
+                await context.Students.AddAsync(student);
+                await context.SaveChangesAsync();
 
-//            return (ResponseDto<StudentDto>)ResponseDto<StudentDto>.SuccessResult(
-//                MapToStudentDto(createdStudent!),
-//                "Student created successfully",
-//                (int)HttpStatusCode.Created);
-//        }
-//        catch (Exception ex)
-//        {
-//            return (ResponseDto<StudentDto>)ResponseDto<StudentDto>.ErrorResult(
-//                (int)HttpStatusCode.InternalServerError,
-//                $"An error occurred while creating student: {ex.Message}");
-//        }
-//    }
+                // Return created student
+                var createdStudent = await GetStudentWithDetails(student.Id);
+                return ResponseDtoData<StudentDto>.SuccessResult(
+                    MapToStudentDto(createdStudent!),
+                    "Student created successfully",
+                    (int)HttpStatusCode.Created
+                );
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error creating student: {Message}", ex.InnerException?.Message);
+                return ResponseDtoData<StudentDto>.ErrorResult(
+                    (int)HttpStatusCode.InternalServerError,
+                    $"An error occurred while creating student: {ex.InnerException?.Message ?? ex.Message}"
+                );
+            }
+        }
 
-//    public async Task<ResponseDto> DeleteStudentAsync(string id)
-//    {
-//        try
-//        {
-//            var student = await _userManager.FindByIdAsync(id.ToString());
-//            if (student == null)
-//            {
-//                return ResponseDto.ErrorResult(
-//                    (int)HttpStatusCode.NotFound,
-//                    "Student not found");
-//            }
+        public async Task<ResponseDtoData<StudentDto>> GetStudentByIdAsync(int id)
+        {
+            try
+            {
+                var student = await GetStudentWithDetails(id);
+                if (student == null)
+                {
+                    return ResponseDtoData<StudentDto>.ErrorResult(
+                        (int)HttpStatusCode.NotFound,
+                        "Student not found",
+                        null);
+                }
 
-//            var result = await _userManager.DeleteAsync(student);
-//            if (!result.Succeeded)
-//            {
-//                return ResponseDto.ErrorResult(
-//                    (int)HttpStatusCode.InternalServerError,
-//                    string.Join(", ", result.Errors.Select(e => e.Description)));
-//            }
+                return ResponseDtoData<StudentDto>.SuccessResult(
+                    MapToStudentDto(student),
+                    "Student retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, $"Error retrieving student with ID {id}");
+                return ResponseDtoData<StudentDto>.ErrorResult(
+                    (int)HttpStatusCode.InternalServerError,
+                    $"An unexpected error occurred while retrieving student: {ex.Message}",
+                    null);
+            }
+        }
 
-//            return ResponseDto.SuccessResult("Student deleted successfully");
-//        }
-//        catch (Exception ex)
-//        {
-//            return ResponseDto.ErrorResult(
-//                (int)HttpStatusCode.InternalServerError,
-//                $"An error occurred while deleting student: {ex.Message}");
-//        }
-//    }
+        public async Task<ResponseDtoData<List<StudentDto>>> GetAllStudentsAsync()
+        {
+            try
+            {
+                var students = await context.Students
+                    .AsNoTracking() 
+                   .Include(s => s.User)
+                   .Include(s => s.Department)
+                   .ToListAsync();
+               
+                    var studentDtos = students.Select(MapToStudentDto).ToList(); 
 
-//    public async Task<ResponseDto<StudentDto>> GetAllStudentsAsync()
-//    {
-//        try
-//        {
-//            var students = await _context.Students
-//                .Include(s => s.Department)
-//                .ToListAsync();
+                return ResponseDtoData<List<StudentDto>>.SuccessResult(studentDtos, "Students retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error retrieving all students");
+                return ResponseDtoData<List<StudentDto>>.ErrorResult(
+                    (int)HttpStatusCode.InternalServerError,
+                    $"An unexpected error occurred while retrieving students: {ex.Message}");
+            }
+        }
 
-//            return ResponseDto<StudentDto>.SuccessResultForList(
-//                students.Select(MapToStudentDto).ToList(),
-//                "Students retrieved successfully");
-//        }
-//        catch (Exception ex)
-//        {
-//            return (ResponseDto<StudentDto>)ResponseDto<StudentDto>.ErrorResult((int)HttpStatusCode.InternalServerError, $"An error occurred while retrieving students: {ex.Message}");
-//        }
-//    }
+        public async Task<ResponseDtoData<StudentDto>> UpdateStudentAsync(int id, StudentUpdateDto studentDto)
+        {
+            try
+            {
+                var student = await GetStudentWithDetails(id);
+                if (student == null)
+                {
+                    return ResponseDtoData<StudentDto>.ErrorResult(
+                        (int)HttpStatusCode.NotFound,
+                        "Student not found"
+                        );
+                }
 
-//    public async Task<ResponseDto<StudentDto>> GetStudentByIdAsync(string id)
-//    {
-//        try
-//        {
-//            var student = await _context.Students
-//                .Include(s => s.Department)
-//                .FirstOrDefaultAsync(s => s.Id == id);
+                var user = await userManager.FindByIdAsync(student.UserId);
+                if (user == null)
+                {
+                    return ResponseDtoData<StudentDto>.ErrorResult(
+                        (int)HttpStatusCode.NotFound,
+                        "Associated user not found",
+                        null);
+                }
 
-//            if (student == null)
-//            {
-//                return (ResponseDto<StudentDto>)ResponseDto<StudentDto>.ErrorResult(
-//                    (int)HttpStatusCode.NotFound,
-//                    "Student not found");
-//            }
+                // Update department if provided and different
+                if (studentDto.DepartmentId != 0 && studentDto.DepartmentId != student.DepartmentId)
+                {
+                    var departmentExists = await context.Departments.AnyAsync(d => d.Id == studentDto.DepartmentId);
+                    if (!departmentExists)
+                    {
+                        return ResponseDtoData<StudentDto>.ErrorResult(
+                            (int)HttpStatusCode.BadRequest,
+                            "Specified department does not exist",
+                            null);
+                    }
+                    student.DepartmentId = studentDto.DepartmentId;
+                }
 
-//            return (ResponseDto<StudentDto>)ResponseDto<StudentDto>.SuccessResult(
-//                MapToStudentDto(student),
-//                "Student retrieved successfully");
-//        }
-//        catch (Exception ex)
-//        {
-//            return (ResponseDto<StudentDto>)ResponseDto<StudentDto>.ErrorResult(
-//                (int)HttpStatusCode.InternalServerError,
-//                $"An error occurred while retrieving student: {ex.Message}");
-//        }
-//    }
+                // Update NationalId if provided and valid
+                if (!string.IsNullOrWhiteSpace(studentDto.NationalId))
+                {
+                    if (int.TryParse(studentDto.NationalId, out int nationalId))
+                    {
+                        student.NationalId = nationalId;
+                    }
+                    else
+                    {
+                        return ResponseDtoData<StudentDto>.ErrorResult(
+                            (int)HttpStatusCode.BadRequest,
+                            "National ID must be a valid number",
+                            null);
+                    }
+                }
 
-//    public async Task<ResponseDto<StudentDto>> UpdateStudentAsync(string id, StudentUpdateDto studentDto)
-//    {
-//        try
-//        {
-//            var student = await _context.Students
-//                .Include(s => s.Department)
-//                .FirstOrDefaultAsync(s => s.Id == id);
+                // Update admission number if provided
+                if (!string.IsNullOrWhiteSpace(studentDto.AdmNo))
+                {
+                    student.AdmNo = studentDto.AdmNo;
+                }
 
-//            if (student == null)
-//            {
-//                return (ResponseDto<StudentDto>)ResponseDto<StudentDto>.ErrorResult(
-//                    (int)HttpStatusCode.NotFound,
-//                    "Student not found");
-//            }
+                // Update user details
+                if (!string.IsNullOrWhiteSpace(studentDto.FirstName))
+                {
+                    user.FirstName = studentDto.FirstName;
+                }
 
-//            // Update required fields
-//            student.FirstName = studentDto.FirstName;
-//            student.LastName = studentDto.LastName;
-//            student.NationalId = studentDto.NationalId;
+                if (!string.IsNullOrWhiteSpace(studentDto.LastName))
+                {
+                    user.LastName = studentDto.LastName;
+                }
 
-//            // Update department if different
-//            if (studentDto.DepartmentId != 0 && studentDto.DepartmentId != student.DepartmentId)
-//            {
-//                var departmentExists = await _context.Departments.AnyAsync(d => d.Id == studentDto.DepartmentId);
-//                if (!departmentExists)
-//                {
-//                    return (ResponseDto<StudentDto>)ResponseDto<StudentDto>.ErrorResult(
-//                        (int)HttpStatusCode.BadRequest,
-//                        "Specified department does not exist");
-//                }
-//                student.DepartmentId = studentDto.DepartmentId;
-//            }
+                // Update email if provided and different
+                if (!string.IsNullOrWhiteSpace(studentDto.Email) && studentDto.Email != user.Email)
+                {
+                    var emailExists = await userManager.FindByEmailAsync(studentDto.Email);
+                    if (emailExists != null && emailExists.Id != user.Id)
+                    {
+                        return ResponseDtoData<StudentDto>.ErrorResult(
+                            (int)HttpStatusCode.Conflict,
+                            "Email already in use by another user",
+                            null);
+                    }
+                    user.Email = studentDto.Email;
+                    user.UserName = studentDto.Email;
+                }
 
-//            // Update email if provided and different
-//            if (!string.IsNullOrEmpty(studentDto.Email) && studentDto.Email != student.Email)
-//            {
-//                var emailExists = await _userManager.FindByEmailAsync(studentDto.Email);
-//                if (emailExists != null && emailExists.Id != student.Id)
-//                {
-//                    return (ResponseDto<StudentDto>)ResponseDto<StudentDto>.ErrorResult(
-//                        (int)HttpStatusCode.Conflict,
-//                        "Email already in use by another user");
-//                }
-//                student.Email = studentDto.Email;
-//                student.UserName = studentDto.Email;
-//                student.NormalizedEmail = studentDto.Email.ToUpper();
-//                student.NormalizedUserName = studentDto.Email.ToUpper();
-//            }
+                // Save user changes
+                var userResult = await userManager.UpdateAsync(user);
+                if (!userResult.Succeeded)
+                {
+                    return ResponseDtoData<StudentDto>.ErrorResult(
+                        (int)HttpStatusCode.BadRequest,
+                        "User update failed: " + string.Join(", ", userResult.Errors.Select(e => e.Description)),
+                        null);
+                }
 
-//            var result = await _userManager.UpdateAsync(student);
-//            if (!result.Succeeded)
-//            {
-//                return (ResponseDto<StudentDto>)ResponseDto<StudentDto>.ErrorResult(
-//                    (int)HttpStatusCode.BadRequest,
-//                    string.Join(", ", result.Errors.Select(e => e.Description)));
-//            }
+                // Save student changes
+                context.Students.Update(student);
+                await context.SaveChangesAsync();
 
-//            return (ResponseDto<StudentDto>)ResponseDto<StudentDto>.SuccessResult(
-//                MapToStudentDto(student),
-//                "Student updated successfully");
-//        }
-//        catch (Exception ex)
-//        {
-//            return (ResponseDto<StudentDto>)ResponseDto<StudentDto>.ErrorResult(
-//                (int)HttpStatusCode.InternalServerError,
-//                $"An error occurred while updating student: {ex.Message}");
-//        }
-//    }
+                // Return updated student
+                var updatedStudent = await GetStudentWithDetails(id);
+                return ResponseDtoData<StudentDto>.SuccessResult(
+                    MapToStudentDto(updatedStudent!),
+                    "Student updated successfully");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, $"Error updating student with ID {id}");
+                return ResponseDtoData<StudentDto>.ErrorResult(
+                    (int)HttpStatusCode.InternalServerError,
+                    $"An unexpected error occurred while updating student: {ex.Message}");
+            }
+        }
 
-//    private StudentDto MapToStudentDto(Student student)
-//    {
-//        return new StudentDto
-//        {
-//            Id = student.Id,
-//            FirstName = student.FirstName,
-//            LastName = student.LastName,
-//            Email = student.Email,
-//            NationalId = student.NationalId.ToString(),
-//            AdmNo = student.AdmNo,
-//            DepartmentId = student.DepartmentId,
-//            DepartmentName = student.Department?.DepartmentName
-//        };
-//    }
-//}
+        public async Task<ResponseDto> DeleteStudentAsync(int id)
+        {
+            try
+            {
+                var student = await context.Students.FindAsync(id);
+                if (student == null)
+                {
+                    return ResponseDto.ErrorResult(
+                        (int)HttpStatusCode.NotFound,
+                        "Student not found");
+                }
+
+                // Soft delete
+                student.IsActive = false;
+                context.Students.Update(student);
+                await context.SaveChangesAsync();
+
+                // Optionally deactivate the user as well
+                var user = await userManager.FindByIdAsync(student.UserId);
+                if (user != null)
+                {
+                    user.EmailConfirmed = false;
+                    await userManager.UpdateAsync(user);
+                }
+
+                return ResponseDto.SuccessResult("Student deleted successfully");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, $"Error deleting student with ID {id}");
+                return ResponseDto.ErrorResult(
+                    (int)HttpStatusCode.InternalServerError,
+                    $"An unexpected error occurred while deleting student: {ex.Message}");
+            }
+        }
+
+        #region Helper Methods
+
+        private async Task<Student?> GetStudentWithDetails(int id)
+        {
+            if (id <= 0)
+            {
+                logger.LogWarning("Invalid student ID: {Id}", id);
+                return null;
+            }
+
+            try
+            {
+                return await context.Students
+                    .AsNoTracking() // Improves performance if no updates are needed
+                    .Include(s => s.User)
+                    .Include(s => s.Department)
+                    .FirstOrDefaultAsync(s => s.Id == id);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error fetching student with ID: {Id}", id);
+                return null;
+            }
+        }
+
+
+        private async Task<ResponseDtoData<StudentDto>?> ValidateStudentCreateDto(StudentCreateDto studentDto)
+        {
+            // Validate department exists
+            if (!await context.Departments.AnyAsync(d => d.Id == studentDto.DepartmentId))
+            {
+                return ResponseDtoData<StudentDto>.ErrorResult(
+                    (int)HttpStatusCode.BadRequest,
+                    "Specified department does not exist",
+                    null);
+            }
+
+            // Check for duplicate admission number
+            if (await context.Students.AnyAsync(s => s.AdmNo == studentDto.AdmNo))
+            {
+                return ResponseDtoData<StudentDto>.ErrorResult(
+                    (int)HttpStatusCode.Conflict,
+                    "Student with this admission number already exists",
+                    null);
+            }
+
+            // Check for duplicate email
+            if (await userManager.FindByEmailAsync(studentDto.Email) != null)
+            {
+                return ResponseDtoData<StudentDto>.ErrorResult(
+                    (int)HttpStatusCode.Conflict,
+                    "User with this email already exists",
+                    null);
+            }
+
+            // Validate National ID format
+            if (!int.TryParse(studentDto.NationalId, out _))
+            {
+                return ResponseDtoData<StudentDto>.ErrorResult(
+                    (int)HttpStatusCode.BadRequest,
+                    "National ID must be a valid number",
+                    null);
+            }
+
+            return null;
+        }
+
+        private static StudentDto MapToStudentDto(Student student)
+        {
+            return new StudentDto
+            {
+                Id = student.Id.ToString(),
+                FirstName = student.User?.FirstName ?? string.Empty,
+                LastName = student.User?.LastName ?? string.Empty,
+                Email = student.User?.Email ?? string.Empty,
+                NationalId = student.NationalId.ToString(),
+                AdmNo = student.AdmNo,
+                DepartmentId = student.DepartmentId.ToString(),
+                DepartmentName = student.Department?.DepartmentName,
+                DepartmentCode = student.Department?.Code,
+                IsActive = student.IsActive
+            };
+        }
+
+        #endregion
+    }
+}

@@ -1,4 +1,4 @@
-﻿using CollegeSystemApi.DTOs;
+﻿using CollegeSystemApi.DTOs.Response;
 using CollegeSystemApi.DTOs.User;
 
 namespace CollegeSystemApi.Services.Interfaces

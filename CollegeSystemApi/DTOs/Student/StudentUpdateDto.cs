@@ -11,12 +11,11 @@ public class StudentUpdateDto
     public string LastName { get; set; }
 
     [Required]
-    public int NationalId { get; set; }
+    public string NationalId { get; set; }
 
     [EmailAddress]
     public string Email { get; set; }
 
     public int DepartmentId { get; set; }
-
-
+    public string? AdmNo { get; set; }
 }

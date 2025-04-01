@@ -1,11 +1,15 @@
-﻿using CollegeSystemApi.DTOs.Student;
-using CollegeSystemApi.DTOs;
+﻿using CollegeSystemApi.DTOs.Response;
+using CollegeSystemApi.DTOs.Student;
+using CollegeSystemApi.Models;
 
-public interface IStudentCrudService
+namespace CollegeSystemApi.Services.Interfaces.IStudentServices
 {
-    Task<ResponseDto<StudentDto>> CreateStudentAsync(StudentCreateDto studentDto);
-    Task<ResponseDto<StudentDto>> GetStudentByIdAsync(string id);
-    Task<ResponseDto<StudentDto>> GetAllStudentsAsync();
-    Task<ResponseDto<StudentDto>> UpdateStudentAsync(string id, StudentUpdateDto studentDto);
-    Task<ResponseDto> DeleteStudentAsync(string id);
+    public interface IStudentCrudService
+    {
+        Task<ResponseDtoData<StudentDto>> CreateStudentAsync(StudentCreateDto studentDto);
+        Task<ResponseDtoData<StudentDto>> GetStudentByIdAsync(int id);
+        Task<ResponseDtoData<List<StudentDto>>> GetAllStudentsAsync();
+        Task<ResponseDtoData<StudentDto>> UpdateStudentAsync(int id, StudentUpdateDto studentDto);
+        Task<ResponseDto> DeleteStudentAsync(int id);
+    }
 }

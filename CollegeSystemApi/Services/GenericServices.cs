@@ -1,23 +1,34 @@
 ﻿using CollegeSystemApi.Data;
-using CollegeSystemApi.DTOs;
 using CollegeSystemApi.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
+using CollegeSystemApi.DTOs.Response;
 
 namespace CollegeSystemApi.Services
 {
+    /// <summary>
+    /// Generic service class for performing CRUD operations on entities.
+    /// </summary>
     public class GenericServices<T> : IGenericServices<T> where T : class
     {
         protected readonly ApplicationDbContext _context;
         protected readonly DbSet<T> _dbSet;
 
+        /// <summary>
+        /// Initializes a new instance of the GenericServices class.
+        /// </summary>
         public GenericServices(ApplicationDbContext context, IHttpContextAccessor httpContextAccessor)
         {
             _context = context;
             _dbSet = context.Set<T>();
         }
 
-        // Add a new entity and return a ResponseDto<T> with success message
+        /// <summary>
+        /// Adds a new entity and returns a success response.
+        /// </summary>
         public virtual async Task<ResponseDto<T>> AddAsync(T entity)
         {
             await _dbSet.AddAsync(entity);
@@ -25,7 +36,9 @@ namespace CollegeSystemApi.Services
             return ResponseDto<T>.SuccessResultForData(entity, "Successfully added.");
         }
 
-        // Delete an entity and return a ResponseDto<T> indicating success or failure
+        /// <summary>
+        /// Deletes an entity and returns a success response.
+        /// </summary>
         public virtual async Task<ResponseDto> Delete(T entity)
         {
             _context.Entry(entity).State = EntityState.Deleted;
@@ -33,24 +46,30 @@ namespace CollegeSystemApi.Services
             return ResponseDto.SuccessResult(null, "Successfully deleted.");
         }
 
-        // Find entities based on a predicate and return a ResponseDto<List<T>> 
+        /// <summary>
+        /// Finds entities based on a predicate.
+        /// </summary>
         public virtual async Task<ResponseDto<T>> FindAsync(Expression<Func<T, bool>> predicate)
         {
             var results = await _dbSet.AsNoTracking().Where(predicate).ToListAsync();
             if (!results.Any())
-                return ResponseDto<T>.ErrorResultForList(404, "Data not found", results);
+                return ResponseDto<T>.ErrorResultForData(404, "Data not found", null);
 
             return ResponseDto<T>.SuccessResultForList(results, "Data found.");
         }
 
-        // Get all entities and return a ResponseDto<List<T>> 
+        /// <summary>
+        /// Gets all entities.
+        /// </summary>
         public virtual async Task<ResponseDto<T>> GetAllAsync()
         {
             var results = await _dbSet.AsNoTracking().ToListAsync();
             return ResponseDto<T>.SuccessResultForList(results, "Data retrieved successfully.");
         }
 
-        // Get an entity by its ID and return a ResponseDto<T> 
+        /// <summary>
+        /// Gets an entity by its ID.
+        /// </summary>
         public virtual async Task<ResponseDto<T>> GetByIdAsync(int id)
         {
             var result = await _dbSet.FindAsync(id);
@@ -60,7 +79,9 @@ namespace CollegeSystemApi.Services
             return ResponseDto<T>.SuccessResultForData(result, "Item found.");
         }
 
-        // Update an entity and return a ResponseDto<T> indicating success or failure
+        /// <summary>
+        /// Updates an entity and returns a success response.
+        /// </summary>
         public virtual async Task<ResponseDto<T>> Update(T entity)
         {
             _context.Entry(entity).State = EntityState.Modified;
@@ -68,7 +89,9 @@ namespace CollegeSystemApi.Services
             return ResponseDto<T>.SuccessResultForData(entity, "Successfully updated.");
         }
 
-        // Save changes and return the number of affected rows
+        /// <summary>
+        /// Saves changes asynchronously and returns the number of affected rows.
+        /// </summary>
         public virtual async Task<int> SaveChangesAsync()
         {
             return await _context.SaveChangesAsync();

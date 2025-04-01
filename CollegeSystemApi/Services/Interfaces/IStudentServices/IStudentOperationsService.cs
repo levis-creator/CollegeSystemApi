@@ -1,5 +1,5 @@
 ﻿using CollegeSystemApi.DTOs.Student;
-using CollegeSystemApi.DTOs;
+using CollegeSystemApi.DTOs.Response;
 
 namespace CollegeSystemApi.Services.Interfaces.StudentServices
 {

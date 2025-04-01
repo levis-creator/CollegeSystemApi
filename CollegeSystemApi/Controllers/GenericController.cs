@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using CollegeSystemApi.Services;
-using CollegeSystemApi.DTOs;
-using System.Threading.Tasks;
 using CollegeSystemApi.Services.Interfaces;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using CollegeSystemApi.DTOs.Response;
 
 namespace CollegeSystemApi.Controllers
 {
@@ -17,64 +17,64 @@ namespace CollegeSystemApi.Controllers
             _genericService = genericService;
         }
 
-        // GET: api/Generic
+        /// <summary>
+        /// Retrieves all records of type <typeparamref name="T"/>.
+        /// </summary>
         [HttpGet]
-        public async Task<ActionResult<ResponseDto<IEnumerable<T>>>> GetAll()
+        public async Task<ActionResult<ResponseDto<List<T>>>> GetAll()
         {
             var result = await _genericService.GetAllAsync();
-            if (result.StatusCode == 200)
-                return Ok(result);
-            return NotFound(result);
+            return StatusCode(result.StatusCode, result);
         }
 
-        // GET: api/Generic/5
+        /// <summary>
+        /// Retrieves a record by its ID.
+        /// </summary>
         [HttpGet("{id}")]
         public async Task<ActionResult<ResponseDto<T>>> GetById(int id)
         {
             var result = await _genericService.GetByIdAsync(id);
-            if (result.StatusCode == 200)
-                return Ok(result);
-            return NotFound(result);
+            return StatusCode(result.StatusCode, result);
         }
 
-        // POST: api/Generic
+        /// <summary>
+        /// Adds a new record.
+        /// </summary>
         [HttpPost]
         public async Task<ActionResult<ResponseDto<T>>> Add([FromBody] T entity)
         {
             if (entity == null)
-                return BadRequest("Entity cannot be null");
+                return BadRequest(ResponseDto<T>.ErrorResultForData(400, "Entity cannot be null."));
 
             var result = await _genericService.AddAsync(entity);
-            if (result.StatusCode == 200)
-                return Ok(result);
-            return StatusCode(500, result);
+            return StatusCode(result.StatusCode, result);
         }
 
-        // PUT: api/Generic/5
+        /// <summary>
+        /// Updates an existing record.
+        /// </summary>
         [HttpPut("{id}")]
         public async Task<ActionResult<ResponseDto<T>>> Update(int id, [FromBody] T entity)
         {
             if (entity == null)
-                return BadRequest("Entity cannot be null");
+                return BadRequest(ResponseDto<T>.ErrorResultForData(400, "Entity cannot be null."));
 
             var result = await _genericService.Update(entity);
-            if (result.StatusCode == 200)
-                return Ok(result);
-            return StatusCode(500, result);
+            return StatusCode(result.StatusCode, result);
         }
 
-        // DELETE: api/Generic/5
+        /// <summary>
+        /// Deletes a record by its ID.
+        /// </summary>
         [HttpDelete("{id}")]
-        public async Task<ActionResult<ResponseDto<T>>> Delete(int id)
+        public async Task<ActionResult<ResponseDto>> Delete(int id)
         {
-            var entity = await _genericService.GetByIdAsync(id);
-            if (entity.Data == null)
-                return NotFound("Entity not found");
+            var entityResult = await _genericService.GetByIdAsync(id);
+            if (entityResult.TypedData == null)
+                return NotFound(ResponseDto.ErrorResult(404, "Entity not found."));
 
-            var result = await _genericService.Delete(entity.Data);
-            if (result.StatusCode == 200)
-                return Ok(result);
-            return StatusCode(500, result);
+            var result = await _genericService.Delete(entityResult.TypedData);
+            return StatusCode(result.StatusCode, result);
         }
     }
 }

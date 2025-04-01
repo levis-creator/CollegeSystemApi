@@ -1,16 +1,17 @@
-﻿using CollegeSystemApi.Data;
+﻿using System.Text;
+using CollegeSystemApi.Data;
 using CollegeSystemApi.DTOs.Auth;
 using CollegeSystemApi.Models;
 using CollegeSystemApi.Models.Common;
 using CollegeSystemApi.Services;
 using CollegeSystemApi.Services.Interfaces;
-using CollegeSystemApi.Services.Interfaces.StudentServices;
+using CollegeSystemApi.Services.Interfaces.IStudentServices;
+using CollegeSystemApi.Services.StudentServices;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using System;
-using System.Text;
+
 namespace CollegeSystemApi.Extensions;
 
 public static class ServiceExtension
@@ -89,7 +90,7 @@ public static class ServiceExtension
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserManagementService, UserManagementService>();
         services.AddScoped<IDepartmentService, DepartmentService>();
-        //services.AddScoped<IStudentCrudService, StudentCrudService>();
+        services.AddScoped<IStudentCrudService, StudentCrudService>();
         //services.AddScoped<IStudentOperationsService, StudentOperationsService>();
 
         return services;

@@ -1,4 +1,4 @@
-﻿using CollegeSystemApi.DTOs;
+﻿using CollegeSystemApi.DTOs.Response;
 using System.Linq.Expressions;
 
 namespace CollegeSystemApi.Services.Interfaces

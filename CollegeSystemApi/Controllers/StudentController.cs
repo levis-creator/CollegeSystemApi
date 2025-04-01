@@ -1,111 +1,93 @@
-﻿
-using CollegeSystemApi.DTOs;
-using CollegeSystemApi.DTOs.Student;
-
-using global::CollegeSystemApi.Services.Interfaces.StudentServices;
+﻿using CollegeSystemApi.DTOs.Student;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
+using CollegeSystemApi.Services.Interfaces.IStudentServices;
+using CollegeSystemApi.Services.Interfaces.StudentServices;
+using CollegeSystemApi.DTOs.Response;
+using CollegeSystemApi.Models;
 
 namespace CollegeSystemApi.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class StudentsController : ControllerBase
+public class StudentsController(
+    IStudentCrudService crudService,
+    // IStudentOperationsService operationsService,
+    ILogger<StudentsController> logger)
+    : ControllerBase
 {
-    private readonly IStudentCrudService _crudService;
-    private readonly IStudentOperationsService _operationsService;
-    private readonly ILogger<StudentsController> _logger;
-
-    public StudentsController(
-        IStudentCrudService crudService,
-        IStudentOperationsService operationsService,
-        ILogger<StudentsController> logger)
-    {
-        _crudService = crudService;
-        _operationsService = operationsService;
-        _logger = logger;
-    }
-
     // POST: api/students
     [Authorize(Roles = "Admin")]
     [HttpPost]
-    public async Task<ActionResult<ResponseDto<StudentDto>>> CreateStudent([FromBody] StudentCreateDto studentDto)
+    public async Task<ActionResult<ResponseDtoData<StudentDto>>> CreateStudent([FromBody] StudentCreateDto studentDto)
     {
-        _logger.LogInformation("Creating new student");
-        var result = await _crudService.CreateStudentAsync(studentDto);
+        logger.LogInformation("Creating new student");
+        var result = await crudService.CreateStudentAsync(studentDto);
 
-        return result.StatusCode switch
-        {
-            (int)HttpStatusCode.Created => CreatedAtAction(
-                nameof(GetStudentById),
-                new { result.Data },
-                result),
-            _ => StatusCode(result.StatusCode, result)
-        };
+        return StatusCode(result.StatusCode, result);
     }
 
     // GET: api/students/{id}
     [HttpGet("{id}")]
-    public async Task<ActionResult<ResponseDto<StudentDto>>> GetStudentById(string id)
+    public async Task<ActionResult<ResponseDto<StudentDto>>> GetStudentById(int id)
     {
-        _logger.LogInformation("Getting student with ID: {Id}", id);
-        var result = await _crudService.GetStudentByIdAsync(id);
+        logger.LogInformation("Getting student with ID: {Id}", id);
+        var result = await crudService.GetStudentByIdAsync(id);
         return StatusCode(result.StatusCode, result);
     }
 
     // GET: api/students
     [HttpGet]
-    public async Task<ActionResult<ResponseDto<IEnumerable<StudentDto>>>> GetAllStudents()
+    public async Task<ActionResult<ResponseDtoData<List<StudentDto>>>> GetAllStudents()
     {
-        _logger.LogInformation("Getting all students");
-        var result = await _crudService.GetAllStudentsAsync();
+        logger.LogInformation("Getting all students");
+        var result = await crudService.GetAllStudentsAsync();
         return StatusCode(result.StatusCode, result);
     }
 
     // PUT: api/students/{id}
     [Authorize(Roles = "Admin")]
     [HttpPut("{id}")]
-    public async Task<ActionResult<ResponseDto<StudentDto>>> UpdateStudent(
-        string id,
+    public async Task<ActionResult<ResponseDtoData<StudentDto>>> UpdateStudent(
+        int id,
         [FromBody] StudentUpdateDto studentDto)
     {
-        _logger.LogInformation("Updating student with ID: {Id}", id);
-        var result = await _crudService.UpdateStudentAsync(id, studentDto);
+        logger.LogInformation("Updating student with ID: {Id}", id);
+        var result = await crudService.UpdateStudentAsync(id, studentDto);
         return StatusCode(result.StatusCode, result);
     }
 
     // DELETE: api/students/{id}
     [Authorize(Roles = "Admin")]
     [HttpDelete("{id}")]
-    public async Task<ActionResult<ResponseDto>> DeleteStudent(string id)
+    public async Task<ActionResult<ResponseDto>> DeleteStudent(int id)
     {
-        _logger.LogInformation("Deleting student with ID: {Id}", id);
-        var result = await _crudService.DeleteStudentAsync(id);
+        logger.LogInformation("Deleting student with ID: {Id}", id);
+        var result = await crudService.DeleteStudentAsync(id);
         return StatusCode(result.StatusCode, result);
     }
 
-    // PATCH: api/students/{studentId}/department/{departmentId}
-    [Authorize(Roles = "Admin")]
-    [HttpPatch("{studentId}/department/{departmentId}")]
-    public async Task<ActionResult<ResponseDto>> ChangeStudentDepartment(
-        string studentId,
-        int departmentId)
-    {
-        _logger.LogInformation("Changing department for student {StudentId} to {DepartmentId}",
-            studentId, departmentId);
-        var result = await _operationsService.ChangeStudentDepartmentAsync(studentId, departmentId);
-        return StatusCode(result.StatusCode, result);
-    }
-
-    // GET: api/students/department/{departmentId}
-    [HttpGet("department/{departmentId}")]
-    public async Task<ActionResult<ResponseDto<IEnumerable<StudentDto>>>> GetStudentsByDepartment(
-        int departmentId)
-    {
-        _logger.LogInformation("Getting students in department: {DepartmentId}", departmentId);
-        var result = await _operationsService.GetStudentsByDepartmentAsync(departmentId);
-        return StatusCode(result.StatusCode, result);
-    }
+    // // PATCH: api/students/{studentId}/department/{departmentId}
+    // [Authorize(Roles = "Admin")]
+    // [HttpPatch("{studentId}/department/{departmentId}")]
+    // public async Task<ActionResult<ResponseDto>> ChangeStudentDepartment(
+    //     string studentId,
+    //     int departmentId)
+    // {
+    //     logger.LogInformation("Changing department for student {StudentId} to {DepartmentId}",
+    //         studentId, departmentId);
+    //     var result = await operationsService.ChangeStudentDepartmentAsync(studentId, departmentId);
+    //     return StatusCode(result.StatusCode, result);
+    // }
+    //
+    // // GET: api/students/department/{departmentId}
+    // [HttpGet("department/{departmentId}")]
+    // public async Task<ActionResult<ResponseDto<IEnumerable<StudentDto>>>> GetStudentsByDepartment(
+    //     int departmentId)
+    // {
+    //     logger.LogInformation("Getting students in department: {DepartmentId}", departmentId);
+    //     var result = await operationsService.GetStudentsByDepartmentAsync(departmentId);
+    //     return StatusCode(result.StatusCode, result);
+    // }
 }
-

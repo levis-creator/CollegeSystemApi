@@ -7,6 +7,6 @@ namespace CollegeSystemApi.Models
         public string DepartmentName { get; set; } = string.Empty;
         public string Code { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
-        public IEnumerable<Student> Students { get; set; } = [];
+        public List<Student> Students { get; set; } = [];
     }
 }

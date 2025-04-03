@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
+﻿using System.Net;
 using CollegeSystemApi.DTOs.Response;
 using CollegeSystemApi.DTOs.User;
 using CollegeSystemApi.Models;
@@ -23,7 +19,7 @@ namespace CollegeSystemApi.Services
             _roleManager = roleManager;
         }
 
-        public async Task<ResponseDto<UserAdminDisplayDto>> GetAllUsersAsync()
+        public async Task<ResponseDtoData<List<UserAdminDisplayDto>>> GetAllUsersAsync()
         {
             // Retrieve all users from the database
             var dbUsers = _userManager.Users.ToList();
@@ -50,10 +46,10 @@ namespace CollegeSystemApi.Services
             }
 
             // Return success response with list of users
-            return ResponseDto<UserAdminDisplayDto>.SuccessResultForList(userDtos, "Users retrieved successfully");
+            return ResponseDtoData<List<UserAdminDisplayDto>>.SuccessResult(userDtos, "Users retrieved successfully");
         }
 
-        public async Task<ResponseDto<UserAdminDisplayDto>> GetUserByIdAsync(string userId)
+        public async Task<ResponseDtoData<UserAdminDisplayDto>> GetUserByIdAsync(string userId)
         {
             // Find the user by ID
             var user = await _userManager.FindByIdAsync(userId);
@@ -61,7 +57,7 @@ namespace CollegeSystemApi.Services
             if (user == null)
             {
                 // Return error response when user is not found
-                return ResponseDto<UserAdminDisplayDto>.ErrorResultForData((int)HttpStatusCode.NotFound, "User not found");
+                return ResponseDtoData<UserAdminDisplayDto>.ErrorResult((int)HttpStatusCode.NotFound, "User not found");
             }
 
             // Get the roles for the user
@@ -80,7 +76,7 @@ namespace CollegeSystemApi.Services
             };
 
             // Return success response for the individual user
-            return ResponseDto<UserAdminDisplayDto>.SuccessResultForData(userDto, "User retrieved successfully");
+            return ResponseDtoData<UserAdminDisplayDto>.SuccessResult(userDto, "User retrieved successfully");
         }
     }
 }

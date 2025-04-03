@@ -2,7 +2,7 @@
 
 namespace CollegeSystemApi.Models.Common
 {
-    public abstract class BaseEntity
+    public abstract class BaseEntity:IEntity
     {
         [Key]
         public int Id { get; set; }

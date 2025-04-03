@@ -1,11 +1,8 @@
-﻿using CollegeSystemApi.DTOs.Student;
+﻿using CollegeSystemApi.DTOs.Response;
+using CollegeSystemApi.DTOs.Student;
+using CollegeSystemApi.Services.Interfaces.IStudentServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Net;
-using CollegeSystemApi.Services.Interfaces.IStudentServices;
-using CollegeSystemApi.Services.Interfaces.StudentServices;
-using CollegeSystemApi.DTOs.Response;
-using CollegeSystemApi.Models;
 
 namespace CollegeSystemApi.Controllers;
 

@@ -5,7 +5,7 @@ namespace CollegeSystemApi.Services.Interfaces
 {
     public interface IUserManagementService
     {
-        Task<ResponseDto<UserAdminDisplayDto>> GetAllUsersAsync();
-        Task<ResponseDto<UserAdminDisplayDto>> GetUserByIdAsync(string userId);
+        Task<ResponseDtoData<List<UserAdminDisplayDto>>> GetAllUsersAsync();
+        Task<ResponseDtoData<UserAdminDisplayDto>> GetUserByIdAsync(string userId);
     }
 }

@@ -53,12 +53,14 @@ namespace CollegeSystemApi.Services.StudentServices
                         "Invalid Department ID."
                     );
                 }
-
+                
                 // Create AppUser first
+                var studentFirstName = studentDto.FirstName.Transform(To.TitleCase);
+                var studentLastName=studentDto.LastName.Transform(To.TitleCase);
                 var user = new AppUser
                 {
-                    FirstName = studentDto.FirstName.Transform(To.TitleCase),
-                    LastName = studentDto.LastName.Transform(To.TitleCase),
+                    FirstName = studentFirstName,
+                    LastName = studentLastName,
                     Email = studentDto.Email,
                     UserName = studentDto.Email,
                     EmailConfirmed = true

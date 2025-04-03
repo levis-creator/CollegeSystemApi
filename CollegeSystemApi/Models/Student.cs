@@ -1,5 +1,4 @@
 ﻿using CollegeSystemApi.Models.Common;
-using Microsoft.EntityFrameworkCore;
 
 namespace CollegeSystemApi.Models;
 

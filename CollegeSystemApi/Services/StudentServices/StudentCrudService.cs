@@ -53,10 +53,10 @@ namespace CollegeSystemApi.Services.StudentServices
                         "Invalid Department ID."
                     );
                 }
-                
+
                 // Create AppUser first
                 var studentFirstName = studentDto.FirstName.Transform(To.TitleCase);
-                var studentLastName=studentDto.LastName.Transform(To.TitleCase);
+                var studentLastName = studentDto.LastName.Transform(To.TitleCase);
                 var user = new AppUser
                 {
                     FirstName = studentFirstName,
@@ -71,7 +71,8 @@ namespace CollegeSystemApi.Services.StudentServices
                 var userResult = await userManager.CreateAsync(user, defaultPassword);
                 if (!userResult.Succeeded)
                 {
-                    logger.LogError("User creation failed: {Errors}", string.Join(", ", userResult.Errors.Select(e => e.Description)));
+                    logger.LogError("User creation failed: {Errors}",
+                        string.Join(", ", userResult.Errors.Select(e => e.Description)));
                     return ResponseDtoData<StudentDto>.ErrorResult(
                         (int)HttpStatusCode.BadRequest,
                         "User creation failed: " + string.Join(", ", userResult.Errors.Select(e => e.Description))
@@ -82,7 +83,8 @@ namespace CollegeSystemApi.Services.StudentServices
                 var roleResult = await userManager.AddToRoleAsync(user, "Student");
                 if (!roleResult.Succeeded)
                 {
-                    logger.LogError("Role assignment failed: {Errors}", string.Join(", ", roleResult.Errors.Select(e => e.Description)));
+                    logger.LogError("Role assignment failed: {Errors}",
+                        string.Join(", ", roleResult.Errors.Select(e => e.Description)));
                     await userManager.DeleteAsync(user); // Rollback user creation if role assignment fails
                     return ResponseDtoData<StudentDto>.ErrorResult(
                         (int)HttpStatusCode.InternalServerError,
@@ -153,12 +155,12 @@ namespace CollegeSystemApi.Services.StudentServices
             try
             {
                 var students = await context.Students
-                    .AsNoTracking() 
-                   .Include(s => s.User)
-                   .Include(s => s.Department)
-                   .ToListAsync();
-               
-                    var studentDtos = students.Select(MapToStudentDto).ToList(); 
+                    .AsNoTracking()
+                    .Include(s => s.User)
+                    .Include(s => s.Department)
+                    .ToListAsync();
+
+                var studentDtos = students.Select(MapToStudentDto).ToList();
 
                 return ResponseDtoData<List<StudentDto>>.SuccessResult(studentDtos, "Students retrieved successfully");
             }
@@ -181,19 +183,23 @@ namespace CollegeSystemApi.Services.StudentServices
                     return ResponseDtoData<StudentDto>.ErrorResult(
                         (int)HttpStatusCode.NotFound,
                         "Student not found"
-                        );
+                    );
                 }
 
                 var user = await userManager.FindByIdAsync(student.UserId);
+
                 if (user == null)
                 {
                     return ResponseDtoData<StudentDto>.ErrorResult(
                         (int)HttpStatusCode.NotFound,
-                        "Associated user not found",
-                        null);
+                        "Associated user not found"
+                    );
                 }
+        
+                bool isStudentUpdated = false;
+                bool isUserUpdated = false;
 
-                // Update department if provided and different
+                // Department update
                 if (studentDto.DepartmentId != 0 && studentDto.DepartmentId != student.DepartmentId)
                 {
                     var departmentExists = await context.Departments.AnyAsync(d => d.Id == studentDto.DepartmentId);
@@ -201,46 +207,52 @@ namespace CollegeSystemApi.Services.StudentServices
                     {
                         return ResponseDtoData<StudentDto>.ErrorResult(
                             (int)HttpStatusCode.BadRequest,
-                            "Specified department does not exist",
-                            null);
+                            "Specified department does not exist"
+                        );
                     }
+
                     student.DepartmentId = studentDto.DepartmentId;
+                    isStudentUpdated = true;
                 }
 
-                // Update NationalId if provided and valid
-                if (!string.IsNullOrWhiteSpace(studentDto.NationalId))
+                // National ID update
+                if (!string.IsNullOrWhiteSpace(studentDto.NationalId) &&
+                    int.TryParse(studentDto.NationalId, out int nationalId) &&
+                    student.NationalId != nationalId)
                 {
-                    if (int.TryParse(studentDto.NationalId, out int nationalId))
-                    {
-                        student.NationalId = nationalId;
-                    }
-                    else
-                    {
-                        return ResponseDtoData<StudentDto>.ErrorResult(
-                            (int)HttpStatusCode.BadRequest,
-                            "National ID must be a valid number",
-                            null);
-                    }
+                    student.NationalId = nationalId;
+                    isStudentUpdated = true;
+                }
+                else if (!string.IsNullOrWhiteSpace(studentDto.NationalId) && !int.TryParse(studentDto.NationalId, out _))
+                {
+                    return ResponseDtoData<StudentDto>.ErrorResult(
+                        (int)HttpStatusCode.BadRequest,
+                        "National ID must be a valid number"
+                    );
                 }
 
-                // Update admission number if provided
-                if (!string.IsNullOrWhiteSpace(studentDto.AdmNo))
+                // AdmNo update
+                if (!string.IsNullOrWhiteSpace(studentDto.AdmNo) && studentDto.AdmNo != student.AdmNo)
                 {
                     student.AdmNo = studentDto.AdmNo;
+                    isStudentUpdated = true;
                 }
 
-                // Update user details
-                if (!string.IsNullOrWhiteSpace(studentDto.FirstName))
+                // First name
+                if (!string.IsNullOrWhiteSpace(studentDto.FirstName) && studentDto.FirstName != user.FirstName)
                 {
                     user.FirstName = studentDto.FirstName;
+                    isUserUpdated = true;
                 }
 
-                if (!string.IsNullOrWhiteSpace(studentDto.LastName))
+                // Last name
+                if (!string.IsNullOrWhiteSpace(studentDto.LastName) && studentDto.LastName != user.LastName)
                 {
                     user.LastName = studentDto.LastName;
+                    isUserUpdated = true;
                 }
 
-                // Update email if provided and different
+                // Email
                 if (!string.IsNullOrWhiteSpace(studentDto.Email) && studentDto.Email != user.Email)
                 {
                     var emailExists = await userManager.FindByEmailAsync(studentDto.Email);
@@ -248,39 +260,48 @@ namespace CollegeSystemApi.Services.StudentServices
                     {
                         return ResponseDtoData<StudentDto>.ErrorResult(
                             (int)HttpStatusCode.Conflict,
-                            "Email already in use by another user",
-                            null);
+                            "Email already in use by another user"
+                        );
                     }
+
                     user.Email = studentDto.Email;
                     user.UserName = studentDto.Email;
+                    isUserUpdated = true;
                 }
 
-                // Save user changes
-                var userResult = await userManager.UpdateAsync(user);
-                if (!userResult.Succeeded)
+                // Update only if changes were made
+                if (isUserUpdated)
                 {
-                    return ResponseDtoData<StudentDto>.ErrorResult(
-                        (int)HttpStatusCode.BadRequest,
-                        "User update failed: " + string.Join(", ", userResult.Errors.Select(e => e.Description)),
-                        null);
+                    var userResult = await userManager.UpdateAsync(user);
+                    if (!userResult.Succeeded)
+                    {
+                        return ResponseDtoData<StudentDto>.ErrorResult(
+                            (int)HttpStatusCode.BadRequest,
+                            "User update failed: " + string.Join(", ", userResult.Errors.Select(e => e.Description))
+                        );
+                    }
                 }
 
-                // Save student changes
-                context.Students.Update(student);
-                await context.SaveChangesAsync();
+                    context.Entry(user).State = EntityState.Detached;
+                if (isStudentUpdated)
+                {
+                    context.Students.Update(student);
+                    await context.SaveChangesAsync();
+                }
 
-                // Return updated student
                 var updatedStudent = await GetStudentWithDetails(id);
                 return ResponseDtoData<StudentDto>.SuccessResult(
                     MapToStudentDto(updatedStudent!),
-                    "Student updated successfully");
+                    "Student updated successfully"
+                );
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, $"Error updating student with ID {id}");
+                logger.LogError(ex, "Error updating student with ID {Id}: {Message}", id, ex.Message);
                 return ResponseDtoData<StudentDto>.ErrorResult(
                     (int)HttpStatusCode.InternalServerError,
-                    $"An unexpected error occurred while updating student: {ex.Message}");
+                    $"Error updating student: {ex.Message}"
+                );
             }
         }
 
@@ -344,7 +365,6 @@ namespace CollegeSystemApi.Services.StudentServices
                 return null;
             }
         }
-
 
         private async Task<ResponseDtoData<StudentDto>?> ValidateStudentCreateDto(StudentCreateDto studentDto)
         {

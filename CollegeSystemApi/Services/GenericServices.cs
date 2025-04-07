@@ -88,9 +88,7 @@ namespace CollegeSystemApi.Services
                     return ResponseDtoData<T>.ErrorResult((int)HttpStatusCode.NotFound, "Entity not found.");
                 }
 
-                // Ensure the entity being updated has the correct ID
-                entity.Id = existingEntity.Id;
-
+                // Ensure the entity being updated has the correct IDd
                 // Copy all properties EXCEPT the key property
                 _context.Entry(existingEntity).CurrentValues.SetValues(entity);
 

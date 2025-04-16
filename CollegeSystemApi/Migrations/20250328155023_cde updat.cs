@@ -11,7 +11,7 @@ namespace CollegeSystemApi.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<string>(
-                name: "Code",
+                name: "DepartmentCode",
                 table: "Departments",
                 type: "nvarchar(max)",
                 nullable: false,
@@ -22,7 +22,7 @@ namespace CollegeSystemApi.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "Code",
+                name: "DepartmentCode",
                 table: "Departments");
         }
     }

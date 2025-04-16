@@ -173,6 +173,31 @@ namespace CollegeSystemApi.Services.StudentServices
             }
         }
 
+        public async Task<ResponseDtoData<List<StudentDto>>> GetActiveStudents()
+        {
+            try
+            {
+                var activeStudents = await context.Students
+                    .AsNoTracking()
+                    .Where(s => s.IsActive)
+                    .Include(s => s.User)
+                    .Include(s => s.Department)
+                    .ToListAsync();
+
+                var activeStudentDtos = activeStudents.Select(MapToStudentDto).ToList();
+
+                return ResponseDtoData<List<StudentDto>>.SuccessResult(activeStudentDtos, "Active students retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error retrieving active students");
+                return ResponseDtoData<List<StudentDto>>.ErrorResult(
+                    (int)HttpStatusCode.InternalServerError,
+                    $"An unexpected error occurred while retrieving active students: {ex.Message}");
+            }
+        }
+
+
         public async Task<ResponseDtoData<StudentDto>> UpdateStudentAsync(int id, StudentUpdateDto studentDto)
         {
             try
@@ -210,7 +235,7 @@ namespace CollegeSystemApi.Services.StudentServices
                             "Specified department does not exist"
                         );
                     }
-
+                    student.Department = null;
                     student.DepartmentId = studentDto.DepartmentId;
                     isStudentUpdated = true;
                 }
@@ -285,6 +310,7 @@ namespace CollegeSystemApi.Services.StudentServices
                     context.Entry(user).State = EntityState.Detached;
                 if (isStudentUpdated)
                 {
+                    student.UpdatedAt = DateTime.Now;
                     context.Students.Update(student);
                     await context.SaveChangesAsync();
                 }
@@ -340,6 +366,7 @@ namespace CollegeSystemApi.Services.StudentServices
                     $"An unexpected error occurred while deleting student: {ex.Message}");
             }
         }
+
 
         #region Helper Methods
 
@@ -419,7 +446,7 @@ namespace CollegeSystemApi.Services.StudentServices
                 AdmNo = student.AdmNo,
                 DepartmentId = student.DepartmentId.ToString(),
                 DepartmentName = student.Department?.DepartmentName,
-                DepartmentCode = student.Department?.Code,
+                DepartmentCode = student.Department?.DepartmentCode,
                 IsActive = student.IsActive
             };
         }

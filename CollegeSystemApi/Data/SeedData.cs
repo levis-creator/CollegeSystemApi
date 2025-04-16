@@ -108,9 +108,9 @@ namespace CollegeSystemApi.Data
 
                 var departments = new[]
                 {
-                    new Department { DepartmentName = "Computer Science", Code = "CS" },
-                    new Department { DepartmentName = "Electrical Engineering", Code = "EE" },
-                    new Department { DepartmentName = "Business Administration", Code = "BA" }
+                    new Department { DepartmentName = "Computer Science", DepartmentCode = "CS" },
+                    new Department { DepartmentName = "Electrical Engineering", DepartmentCode = "EE" },
+                    new Department { DepartmentName = "Business Administration", DepartmentCode = "BA" }
                 };
 
                 try

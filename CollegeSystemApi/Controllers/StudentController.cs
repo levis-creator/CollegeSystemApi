@@ -36,7 +36,15 @@ public class StudentsController(
 
     // GET: api/students
     [HttpGet]
-    public async Task<ActionResult<ResponseDtoData<List<StudentDto>>>> GetAllStudents()
+    public async Task<ActionResult<ResponseDtoData<List<StudentDto>>>> GetStudents()
+    {
+        logger.LogInformation("Getting all students");
+        var result = await crudService.GetActiveStudents();
+        return StatusCode(result.StatusCode, result);
+    }
+
+    [HttpGet("/all")]
+    public async Task<ActionResult<ResponseDtoData<List<StudentDto>>>> GetAllStudent()
     {
         logger.LogInformation("Getting all students");
         var result = await crudService.GetAllStudentsAsync();

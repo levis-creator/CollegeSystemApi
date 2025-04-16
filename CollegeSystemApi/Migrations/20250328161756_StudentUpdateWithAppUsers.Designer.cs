@@ -139,7 +139,7 @@ namespace CollegeSystemApi.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Code")
+                    b.Property<string>("DepartmentCode")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 

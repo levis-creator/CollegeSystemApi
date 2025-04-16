@@ -18,6 +18,8 @@ builder.Services.AddDataseConfiguration(connectionString);
 builder.Services.AddIdentityConfiguration(builder.Configuration);
 builder.Services.AddCorsConfiguration();
 builder.Services.AddServices();
+builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddEndpointsApiExplorer();

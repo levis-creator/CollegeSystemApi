@@ -1,4 +1,4 @@
-﻿using CollegeSystemApi.Models;
+﻿using CollegeSystemApi.Models.Entities;
 using CollegeSystemApi.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;

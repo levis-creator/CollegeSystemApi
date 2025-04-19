@@ -7,7 +7,9 @@ using CollegeSystemApi.Services;
 using CollegeSystemApi.Services.CoursesServices;
 using CollegeSystemApi.Services.Interfaces;
 using CollegeSystemApi.Services.Interfaces.ICoursesServices;
+using CollegeSystemApi.Services.Interfaces.IProgrammeServices;
 using CollegeSystemApi.Services.Interfaces.IStudentServices;
+using CollegeSystemApi.Services.ProgrammeServices;
 using CollegeSystemApi.Services.StudentServices;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -94,6 +96,8 @@ public static class ServiceExtension
         services.AddScoped<IDepartmentService, DepartmentService>();
         services.AddScoped<IStudentCrudService, StudentCrudService>();
         services.AddScoped<ICourseService, CourseService>();
+        services.AddScoped<IProgrammeService, ProgrammeService>();
+        services.AddScoped<IAcademicYearService, AcademicYearService>();
         //services.AddScoped<IStudentOperationsService, StudentOperationsService>();
 
         return services;

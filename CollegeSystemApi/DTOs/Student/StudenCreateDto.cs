@@ -17,7 +17,7 @@ public class StudentCreateDto
     public string Email { get; set; } = string.Empty;
 
     public string AdmNo { get; set; } = string.Empty;
-
+    public int ProgrammeId { get; set; }
     public int DepartmentId { get; set; }
 
 }

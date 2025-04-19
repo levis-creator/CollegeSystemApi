@@ -2,6 +2,6 @@
 
 namespace CollegeSystemApi.Services.Interfaces;
 
-public interface IDepartmentService: IGenericServices<Department>
+public interface IAcademicYearService:IGenericServices<AcademicYear>
 {
 }

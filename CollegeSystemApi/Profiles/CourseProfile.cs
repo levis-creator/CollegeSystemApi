@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using CollegeSystemApi.DTOs;
 using CollegeSystemApi.DTOs.Courses;
-using CollegeSystemApi.Models;
+using CollegeSystemApi.Models.Entities;
 
 namespace CollegeSystemApi.Profiles;
 

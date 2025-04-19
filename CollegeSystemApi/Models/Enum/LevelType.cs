@@ -1,9 +1,8 @@
-﻿namespace CollegeSystemApi.Models.Enum
+﻿namespace CollegeSystemApi.Models.Enum;
+
+public enum LevelType
 {
-    public enum LevelType
-    {
-        Certificate,
-        Diploma,
-        Degree
-    }
+    Certificate,
+    Diploma,
+    Degree
 }

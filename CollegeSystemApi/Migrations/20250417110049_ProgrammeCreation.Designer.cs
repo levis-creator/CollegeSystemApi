@@ -4,6 +4,7 @@ using CollegeSystemApi.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CollegeSystemApi.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250417110049_ProgrammeCreation")]
+    partial class ProgrammeCreation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -128,37 +131,7 @@ namespace CollegeSystemApi.Migrations
                     b.ToTable("AspNetRoles", (string)null);
                 });
 
-            modelBuilder.Entity("CollegeSystemApi.Models.Entities.AcademicYear", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("AcademicPeriod")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("AcademicYears");
-                });
-
-            modelBuilder.Entity("CollegeSystemApi.Models.Entities.Course", b =>
+            modelBuilder.Entity("CollegeSystemApi.Models.Course", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -203,7 +176,7 @@ namespace CollegeSystemApi.Migrations
                     b.ToTable("Courses");
                 });
 
-            modelBuilder.Entity("CollegeSystemApi.Models.Entities.Department", b =>
+            modelBuilder.Entity("CollegeSystemApi.Models.Department", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -244,7 +217,7 @@ namespace CollegeSystemApi.Migrations
                     b.ToTable("Departments");
                 });
 
-            modelBuilder.Entity("CollegeSystemApi.Models.Entities.Programme", b =>
+            modelBuilder.Entity("CollegeSystemApi.Models.Programme", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -264,9 +237,6 @@ namespace CollegeSystemApi.Migrations
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
 
                     b.Property<int>("Level")
                         .HasColumnType("int");
@@ -299,7 +269,7 @@ namespace CollegeSystemApi.Migrations
                     b.ToTable("Programmes");
                 });
 
-            modelBuilder.Entity("CollegeSystemApi.Models.Entities.Student", b =>
+            modelBuilder.Entity("CollegeSystemApi.Models.Student", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -310,9 +280,6 @@ namespace CollegeSystemApi.Migrations
                     b.Property<string>("AdmNo")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateOnly>("AdmissionDate")
-                        .HasColumnType("date");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -327,9 +294,6 @@ namespace CollegeSystemApi.Migrations
                         .HasColumnType("bit");
 
                     b.Property<int>("NationalId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("ProgrammeId")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -349,8 +313,6 @@ namespace CollegeSystemApi.Migrations
 
                     b.HasIndex("NationalId")
                         .IsUnique();
-
-                    b.HasIndex("ProgrammeId");
 
                     b.HasIndex("UserId");
 
@@ -463,9 +425,9 @@ namespace CollegeSystemApi.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("CollegeSystemApi.Models.Entities.Course", b =>
+            modelBuilder.Entity("CollegeSystemApi.Models.Course", b =>
                 {
-                    b.HasOne("CollegeSystemApi.Models.Entities.Department", "Department")
+                    b.HasOne("CollegeSystemApi.Models.Department", "Department")
                         .WithMany()
                         .HasForeignKey("DepartmentId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -474,9 +436,9 @@ namespace CollegeSystemApi.Migrations
                     b.Navigation("Department");
                 });
 
-            modelBuilder.Entity("CollegeSystemApi.Models.Entities.Programme", b =>
+            modelBuilder.Entity("CollegeSystemApi.Models.Programme", b =>
                 {
-                    b.HasOne("CollegeSystemApi.Models.Entities.Department", "Department")
+                    b.HasOne("CollegeSystemApi.Models.Department", "Department")
                         .WithMany()
                         .HasForeignKey("DepartmentId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -485,17 +447,12 @@ namespace CollegeSystemApi.Migrations
                     b.Navigation("Department");
                 });
 
-            modelBuilder.Entity("CollegeSystemApi.Models.Entities.Student", b =>
+            modelBuilder.Entity("CollegeSystemApi.Models.Student", b =>
                 {
-                    b.HasOne("CollegeSystemApi.Models.Entities.Department", "Department")
+                    b.HasOne("CollegeSystemApi.Models.Department", "Department")
                         .WithMany("Students")
                         .HasForeignKey("DepartmentId")
                         .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("CollegeSystemApi.Models.Entities.Programme", "Programme")
-                        .WithMany("Students")
-                        .HasForeignKey("ProgrammeId")
-                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("CollegeSystemApi.Models.AppUser", "User")
                         .WithMany()
@@ -504,8 +461,6 @@ namespace CollegeSystemApi.Migrations
                         .IsRequired();
 
                     b.Navigation("Department");
-
-                    b.Navigation("Programme");
 
                     b.Navigation("User");
                 });
@@ -561,12 +516,7 @@ namespace CollegeSystemApi.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CollegeSystemApi.Models.Entities.Department", b =>
-                {
-                    b.Navigation("Students");
-                });
-
-            modelBuilder.Entity("CollegeSystemApi.Models.Entities.Programme", b =>
+            modelBuilder.Entity("CollegeSystemApi.Models.Department", b =>
                 {
                     b.Navigation("Students");
                 });

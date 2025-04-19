@@ -1,6 +1,6 @@
 ﻿using CollegeSystemApi.Models.Common;
 
-namespace CollegeSystemApi.Models;
+namespace CollegeSystemApi.Models.Entities;
 
 public class Course : BaseEntity
 {

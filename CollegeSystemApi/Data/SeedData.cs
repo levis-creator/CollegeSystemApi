@@ -1,5 +1,7 @@
-﻿using CollegeSystemApi.Models;
+﻿
+using CollegeSystemApi.Models;
 using CollegeSystemApi.Models.Common;
+using CollegeSystemApi.Models.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 

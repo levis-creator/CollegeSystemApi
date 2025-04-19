@@ -1,31 +1,44 @@
-﻿using System.Net;
+﻿using AutoMapper;
+using System.Net;
 using CollegeSystemApi.Data;
 using CollegeSystemApi.DTOs.Response;
 using CollegeSystemApi.DTOs.Student;
 using CollegeSystemApi.Models;
 using CollegeSystemApi.Services.Interfaces.IStudentServices;
-using Humanizer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Humanizer;
+using CollegeSystemApi.Models.Entities;
 
 namespace CollegeSystemApi.Services.StudentServices
 {
-    public class StudentCrudService(
-        UserManager<AppUser> userManager,
-        ApplicationDbContext context,
-        ILogger<StudentCrudService> logger)
-        : IStudentCrudService
+    public class StudentCrudService : IStudentCrudService
     {
+        private readonly UserManager<AppUser> userManager;
+        private readonly ApplicationDbContext context;
+        private readonly ILogger<StudentCrudService> logger;
+        private readonly IMapper mapper;
+
+        public StudentCrudService(
+            UserManager<AppUser> userManager,
+            ApplicationDbContext context,
+            ILogger<StudentCrudService> logger,
+            IMapper mapper) // Inject AutoMapper
+        {
+            this.userManager = userManager;
+            this.context = context;
+            this.logger = logger;
+            this.mapper = mapper;
+        }
+
         public async Task<ResponseDtoData<StudentDto>> CreateStudentAsync(StudentCreateDto studentDto)
         {
             try
             {
-                // Validate input
                 var validationResult = await ValidateStudentCreateDto(studentDto);
                 if (validationResult != null)
                     return validationResult;
 
-                // Ensure National ID is a valid integer
                 if (!int.TryParse(studentDto.NationalId, out int nationalId))
                 {
                     return ResponseDtoData<StudentDto>.ErrorResult(
@@ -34,7 +47,6 @@ namespace CollegeSystemApi.Services.StudentServices
                     );
                 }
 
-                // Check if student already exists
                 bool studentExists = await context.Students.AnyAsync(s => s.NationalId == nationalId);
                 if (studentExists)
                 {
@@ -44,7 +56,6 @@ namespace CollegeSystemApi.Services.StudentServices
                     );
                 }
 
-                // Validate Department ID
                 bool departmentExists = await context.Departments.AnyAsync(d => d.Id == studentDto.DepartmentId);
                 if (!departmentExists)
                 {
@@ -54,7 +65,6 @@ namespace CollegeSystemApi.Services.StudentServices
                     );
                 }
 
-                // Create AppUser first
                 var studentFirstName = studentDto.FirstName.Transform(To.TitleCase);
                 var studentLastName = studentDto.LastName.Transform(To.TitleCase);
                 var user = new AppUser
@@ -67,7 +77,6 @@ namespace CollegeSystemApi.Services.StudentServices
                 };
                 var defaultPassword = $"{user.FirstName}{nationalId}#";
 
-                // Create user with National ID as initial password
                 var userResult = await userManager.CreateAsync(user, defaultPassword);
                 if (!userResult.Succeeded)
                 {
@@ -79,20 +88,18 @@ namespace CollegeSystemApi.Services.StudentServices
                     );
                 }
 
-                // Add student role
                 var roleResult = await userManager.AddToRoleAsync(user, "Student");
                 if (!roleResult.Succeeded)
                 {
                     logger.LogError("Role assignment failed: {Errors}",
                         string.Join(", ", roleResult.Errors.Select(e => e.Description)));
-                    await userManager.DeleteAsync(user); // Rollback user creation if role assignment fails
+                    await userManager.DeleteAsync(user);
                     return ResponseDtoData<StudentDto>.ErrorResult(
                         (int)HttpStatusCode.InternalServerError,
                         "Role assignment failed: " + string.Join(", ", roleResult.Errors.Select(e => e.Description))
                     );
                 }
 
-                // Create Student record
                 var student = new Student
                 {
                     NationalId = nationalId,
@@ -105,10 +112,9 @@ namespace CollegeSystemApi.Services.StudentServices
                 await context.Students.AddAsync(student);
                 await context.SaveChangesAsync();
 
-                // Return created student
                 var createdStudent = await GetStudentWithDetails(student.Id);
                 return ResponseDtoData<StudentDto>.SuccessResult(
-                    MapToStudentDto(createdStudent!),
+                    mapper.Map<StudentDto>(createdStudent),
                     "Student created successfully",
                     (int)HttpStatusCode.Created
                 );
@@ -137,7 +143,7 @@ namespace CollegeSystemApi.Services.StudentServices
                 }
 
                 return ResponseDtoData<StudentDto>.SuccessResult(
-                    MapToStudentDto(student),
+                    mapper.Map<StudentDto>(student),
                     "Student retrieved successfully");
             }
             catch (Exception ex)
@@ -160,7 +166,7 @@ namespace CollegeSystemApi.Services.StudentServices
                     .Include(s => s.Department)
                     .ToListAsync();
 
-                var studentDtos = students.Select(MapToStudentDto).ToList();
+                var studentDtos = mapper.Map<List<StudentDto>>(students);
 
                 return ResponseDtoData<List<StudentDto>>.SuccessResult(studentDtos, "Students retrieved successfully");
             }
@@ -184,7 +190,7 @@ namespace CollegeSystemApi.Services.StudentServices
                     .Include(s => s.Department)
                     .ToListAsync();
 
-                var activeStudentDtos = activeStudents.Select(MapToStudentDto).ToList();
+                var activeStudentDtos = mapper.Map<List<StudentDto>>(activeStudents);
 
                 return ResponseDtoData<List<StudentDto>>.SuccessResult(activeStudentDtos, "Active students retrieved successfully");
             }
@@ -196,7 +202,6 @@ namespace CollegeSystemApi.Services.StudentServices
                     $"An unexpected error occurred while retrieving active students: {ex.Message}");
             }
         }
-
 
         public async Task<ResponseDtoData<StudentDto>> UpdateStudentAsync(int id, StudentUpdateDto studentDto)
         {
@@ -212,7 +217,6 @@ namespace CollegeSystemApi.Services.StudentServices
                 }
 
                 var user = await userManager.FindByIdAsync(student.UserId);
-
                 if (user == null)
                 {
                     return ResponseDtoData<StudentDto>.ErrorResult(
@@ -220,106 +224,14 @@ namespace CollegeSystemApi.Services.StudentServices
                         "Associated user not found"
                     );
                 }
-        
-                bool isStudentUpdated = false;
-                bool isUserUpdated = false;
 
-                // Department update
-                if (studentDto.DepartmentId != 0 && studentDto.DepartmentId != student.DepartmentId)
-                {
-                    var departmentExists = await context.Departments.AnyAsync(d => d.Id == studentDto.DepartmentId);
-                    if (!departmentExists)
-                    {
-                        return ResponseDtoData<StudentDto>.ErrorResult(
-                            (int)HttpStatusCode.BadRequest,
-                            "Specified department does not exist"
-                        );
-                    }
-                    student.Department = null;
-                    student.DepartmentId = studentDto.DepartmentId;
-                    isStudentUpdated = true;
-                }
+                var updatedStudent = mapper.Map(studentDto, student);
+                updatedStudent.UpdatedAt = DateTime.Now;
+                context.Students.Update(updatedStudent);
+                await context.SaveChangesAsync();
 
-                // National ID update
-                if (!string.IsNullOrWhiteSpace(studentDto.NationalId) &&
-                    int.TryParse(studentDto.NationalId, out int nationalId) &&
-                    student.NationalId != nationalId)
-                {
-                    student.NationalId = nationalId;
-                    isStudentUpdated = true;
-                }
-                else if (!string.IsNullOrWhiteSpace(studentDto.NationalId) && !int.TryParse(studentDto.NationalId, out _))
-                {
-                    return ResponseDtoData<StudentDto>.ErrorResult(
-                        (int)HttpStatusCode.BadRequest,
-                        "National ID must be a valid number"
-                    );
-                }
-
-                // AdmNo update
-                if (!string.IsNullOrWhiteSpace(studentDto.AdmNo) && studentDto.AdmNo != student.AdmNo)
-                {
-                    student.AdmNo = studentDto.AdmNo;
-                    isStudentUpdated = true;
-                }
-
-                // First name
-                if (!string.IsNullOrWhiteSpace(studentDto.FirstName) && studentDto.FirstName != user.FirstName)
-                {
-                    user.FirstName = studentDto.FirstName;
-                    isUserUpdated = true;
-                }
-
-                // Last name
-                if (!string.IsNullOrWhiteSpace(studentDto.LastName) && studentDto.LastName != user.LastName)
-                {
-                    user.LastName = studentDto.LastName;
-                    isUserUpdated = true;
-                }
-
-                // Email
-                if (!string.IsNullOrWhiteSpace(studentDto.Email) && studentDto.Email != user.Email)
-                {
-                    var emailExists = await userManager.FindByEmailAsync(studentDto.Email);
-                    if (emailExists != null && emailExists.Id != user.Id)
-                    {
-                        return ResponseDtoData<StudentDto>.ErrorResult(
-                            (int)HttpStatusCode.Conflict,
-                            "Email already in use by another user"
-                        );
-                    }
-
-                    user.Email = studentDto.Email;
-                    user.UserName = studentDto.Email;
-                    isUserUpdated = true;
-                }
-
-                // Update only if changes were made
-                if (isUserUpdated)
-                {
-                    var userResult = await userManager.UpdateAsync(user);
-                    if (!userResult.Succeeded)
-                    {
-                        return ResponseDtoData<StudentDto>.ErrorResult(
-                            (int)HttpStatusCode.BadRequest,
-                            "User update failed: " + string.Join(", ", userResult.Errors.Select(e => e.Description))
-                        );
-                    }
-                }
-
-                    context.Entry(user).State = EntityState.Detached;
-                if (isStudentUpdated)
-                {
-                    student.UpdatedAt = DateTime.Now;
-                    context.Students.Update(student);
-                    await context.SaveChangesAsync();
-                }
-
-                var updatedStudent = await GetStudentWithDetails(id);
-                return ResponseDtoData<StudentDto>.SuccessResult(
-                    MapToStudentDto(updatedStudent!),
-                    "Student updated successfully"
-                );
+                var result = mapper.Map<StudentDto>(updatedStudent);
+                return ResponseDtoData<StudentDto>.SuccessResult(result, "Student updated successfully");
             }
             catch (Exception ex)
             {
@@ -343,12 +255,10 @@ namespace CollegeSystemApi.Services.StudentServices
                         "Student not found");
                 }
 
-                // Soft delete
                 student.IsActive = false;
                 context.Students.Update(student);
                 await context.SaveChangesAsync();
 
-                // Optionally deactivate the user as well
                 var user = await userManager.FindByIdAsync(student.UserId);
                 if (user != null)
                 {
@@ -367,9 +277,6 @@ namespace CollegeSystemApi.Services.StudentServices
             }
         }
 
-
-        #region Helper Methods
-
         private async Task<Student?> GetStudentWithDetails(int id)
         {
             if (id <= 0)
@@ -381,7 +288,7 @@ namespace CollegeSystemApi.Services.StudentServices
             try
             {
                 return await context.Students
-                    .AsNoTracking() // Improves performance if no updates are needed
+                    .AsNoTracking()
                     .Include(s => s.User)
                     .Include(s => s.Department)
                     .FirstOrDefaultAsync(s => s.Id == id);
@@ -392,10 +299,9 @@ namespace CollegeSystemApi.Services.StudentServices
                 return null;
             }
         }
-
+        #region Helper Methods
         private async Task<ResponseDtoData<StudentDto>?> ValidateStudentCreateDto(StudentCreateDto studentDto)
         {
-            // Validate department exists
             if (!await context.Departments.AnyAsync(d => d.Id == studentDto.DepartmentId))
             {
                 return ResponseDtoData<StudentDto>.ErrorResult(
@@ -404,7 +310,6 @@ namespace CollegeSystemApi.Services.StudentServices
                     null);
             }
 
-            // Check for duplicate admission number
             if (await context.Students.AnyAsync(s => s.AdmNo == studentDto.AdmNo))
             {
                 return ResponseDtoData<StudentDto>.ErrorResult(
@@ -413,7 +318,6 @@ namespace CollegeSystemApi.Services.StudentServices
                     null);
             }
 
-            // Check for duplicate email
             if (await userManager.FindByEmailAsync(studentDto.Email) != null)
             {
                 return ResponseDtoData<StudentDto>.ErrorResult(
@@ -422,7 +326,6 @@ namespace CollegeSystemApi.Services.StudentServices
                     null);
             }
 
-            // Validate National ID format
             if (!int.TryParse(studentDto.NationalId, out _))
             {
                 return ResponseDtoData<StudentDto>.ErrorResult(
@@ -433,24 +336,6 @@ namespace CollegeSystemApi.Services.StudentServices
 
             return null;
         }
-
-        private static StudentDto MapToStudentDto(Student student)
-        {
-            return new StudentDto
-            {
-                Id = student.Id.ToString(),
-                FirstName = student.User?.FirstName ?? string.Empty,
-                LastName = student.User?.LastName ?? string.Empty,
-                Email = student.User?.Email ?? string.Empty,
-                NationalId = student.NationalId.ToString(),
-                AdmNo = student.AdmNo,
-                DepartmentId = student.DepartmentId.ToString(),
-                DepartmentName = student.Department?.DepartmentName,
-                DepartmentCode = student.Department?.DepartmentCode,
-                IsActive = student.IsActive
-            };
-        }
-
         #endregion
     }
 }

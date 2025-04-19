@@ -3,7 +3,7 @@ using AutoMapper;
 using CollegeSystemApi.Data;
 using CollegeSystemApi.DTOs.Courses;
 using CollegeSystemApi.DTOs.Response;
-using CollegeSystemApi.Models;
+using CollegeSystemApi.Models.Entities;
 using CollegeSystemApi.Services.Interfaces.ICoursesServices;
 using Microsoft.EntityFrameworkCore;
 

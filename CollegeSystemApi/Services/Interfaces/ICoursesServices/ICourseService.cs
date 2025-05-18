@@ -5,10 +5,10 @@ namespace CollegeSystemApi.Services.Interfaces.ICoursesServices;
 
 public interface ICourseService
 {
-    Task<ResponseDtoData<CourseDto>> CreateCourseAsync(CreateCourseDto courseDto);
-    Task<ResponseDtoData<CourseDto>> GetCourseByIdAsync(int id);
-    Task<ResponseDtoData<List<CourseDto>>> GetAllCoursesAsync();
-    Task<ResponseDtoData<List<CourseListDto>>> GetAllCourseListAsync();
-    Task<ResponseDtoData<CourseDto>> UpdateCourseAsync(int id, UpdateCourseDto courseDto);
+    Task<ResponseDtoData<UnitDto>> CreateCourseAsync(CreateUnitDto courseDto);
+    Task<ResponseDtoData<UnitDto>> GetCourseByIdAsync(int id);
+    Task<ResponseDtoData<List<UnitDto>>> GetAllCoursesAsync();
+    Task<ResponseDtoData<List<UnitListDto>>> GetAllCourseListAsync();
+    Task<ResponseDtoData<UnitDto>> UpdateCourseAsync(int id, UpdateUnitDto courseDto);
     Task<ResponseDto> DeleteCourseAsync(int id);
 }

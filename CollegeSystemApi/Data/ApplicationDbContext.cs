@@ -11,10 +11,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 {
     public DbSet<Department> Departments { get; set; }
     public DbSet<Student> Students { get; set; }
-    public DbSet<Course> Courses { get; set; }
+    public DbSet<CourseUnit> CourseUnits { get; set; }
+    public DbSet<Classroom> Classrooms { get; set; }
     public DbSet<Programme> Programmes { get; set; }
     public DbSet<AcademicYear> AcademicYears { get; set; }
-
+    public DbSet<TimeTable> TimeTables { get; set; }
+    public DbSet<Schedule> Schedules { get; set; }
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -46,16 +48,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .IsUnique();
 
         // Course Entity Relationship
-        builder.Entity<Course>()
-            .HasIndex(c => c.CourseCode)
+        builder.Entity<CourseUnit>()
+            .HasIndex(c => c.UnitCode)
             .IsUnique();
-
-        builder.Entity<Course>()
-            .HasOne(c => c.Department)
-            .WithMany()
-            .HasForeignKey(c => c.DepartmentId)
-            .OnDelete(DeleteBehavior.Cascade);
-
         // Programme Entity Relationship
         builder.Entity<Programme>()
             .HasIndex(p => p.ProgrammeCode)

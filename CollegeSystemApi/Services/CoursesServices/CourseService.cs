@@ -15,35 +15,35 @@ public class CourseService(
     IMapper mapper)
     : ICourseService
 {
-    public async Task<ResponseDtoData<CourseDto>> CreateCourseAsync(CreateCourseDto courseDto)
+    public async Task<ResponseDtoData<UnitDto>> CreateCourseAsync(CreateUnitDto courseDto)
     {
         try
         {
             // Check if course code or name already exists
-            bool exists = await context.Courses.AnyAsync(c =>
-                c.CourseCode == courseDto.CourseCode || c.CourseName == courseDto.CourseName);
+            bool exists = await context.CourseUnits.AnyAsync(c =>
+                c.UnitCode == courseDto.UnitCode || c.UnitName == courseDto.UnitName);
 
             if (exists)
             {
-                return ResponseDtoData<CourseDto>.ErrorResult(
+                return ResponseDtoData<UnitDto>.ErrorResult(
                     (int)HttpStatusCode.Conflict,
                     "Course with this name or code already exists"
                 );
             }
 
-            var course = mapper.Map<Course>(courseDto);
+            var course = mapper.Map<CourseUnit>(courseDto);
 
-            await context.Courses.AddAsync(course);
+            await context.CourseUnits.AddAsync(course);
             await context.SaveChangesAsync();
 
-            var createdDto = mapper.Map<CourseDto>(course);
+            var createdDto = mapper.Map<UnitDto>(course);
 
-            return ResponseDtoData<CourseDto>.SuccessResult(createdDto, "Course created successfully", (int)HttpStatusCode.Created);
+            return ResponseDtoData<UnitDto>.SuccessResult(createdDto, "Course created successfully", (int)HttpStatusCode.Created);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error creating course");
-            return ResponseDtoData<CourseDto>.ErrorResult(
+            return ResponseDtoData<UnitDto>.ErrorResult(
                 (int)HttpStatusCode.InternalServerError,
                 $"An error occurred while creating the course: {ex.Message}"
             );
@@ -54,13 +54,13 @@ public class CourseService(
     {
         try
         {
-            var course = await context.Courses.FindAsync(id);
+            var course = await context.CourseUnits.FindAsync(id);
             if (course == null)
             {
                 return ResponseDto.ErrorResult((int)HttpStatusCode.NotFound, "Course not found");
             }
 
-            context.Courses.Remove(course);
+            context.CourseUnits.Remove(course);
             await context.SaveChangesAsync();
 
             return ResponseDto.SuccessResult("Course deleted successfully");
@@ -72,97 +72,96 @@ public class CourseService(
         }
     }
 
-    public async Task<ResponseDtoData<List<CourseDto>>> GetAllCoursesAsync()
+    public async Task<ResponseDtoData<List<UnitDto>>> GetAllCoursesAsync()
     {
         try
         {
-            var allCourses = await context.Courses.Include(x=>x.Department).AsNoTracking().ToListAsync();
-            var result = mapper.Map<List<CourseDto>>(allCourses);
+            var allCourses = await context.CourseUnits.AsNoTracking().ToListAsync();
+            var result = mapper.Map<List<UnitDto>>(allCourses);
 
-            return ResponseDtoData<List<CourseDto>>.SuccessResult(result, "All courses retrieved successfully");
+            return ResponseDtoData<List<UnitDto>>.SuccessResult(result, "All courses retrieved successfully");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error retrieving all courses");
-            return ResponseDtoData<List<CourseDto>>.ErrorResult(
+            return ResponseDtoData<List<UnitDto>>.ErrorResult(
                 (int)HttpStatusCode.InternalServerError,
                 $"An error occurred: {ex.Message}"
             );
         }
     }
 
-    public async Task<ResponseDtoData<CourseDto>> GetCourseByIdAsync(int id)
+    public async Task<ResponseDtoData<UnitDto>> GetCourseByIdAsync(int id)
     {
         try
         {
-            var course = await context.Courses.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id);
+            var course = await context.CourseUnits.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id);
 
             if (course == null)
             {
-                return ResponseDtoData<CourseDto>.ErrorResult(
+                return ResponseDtoData<UnitDto>.ErrorResult(
                     (int)HttpStatusCode.NotFound,
                     "Course not found"
                 );
             }
 
-            var result = mapper.Map<CourseDto>(course);
-            return ResponseDtoData<CourseDto>.SuccessResult(result, "Course retrieved successfully");
+            var result = mapper.Map<UnitDto>(course);
+            return ResponseDtoData<UnitDto>.SuccessResult(result, "Course retrieved successfully");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error retrieving course with ID {Id}", id);
-            return ResponseDtoData<CourseDto>.ErrorResult(
+            return ResponseDtoData<UnitDto>.ErrorResult(
                 (int)HttpStatusCode.InternalServerError,
                 $"An error occurred: {ex.Message}"
             );
         }
     }
 
-    public async Task<ResponseDtoData<List<CourseListDto>>> GetAllCourseListAsync()
+    public async Task<ResponseDtoData<List<UnitListDto>>> GetAllCourseListAsync()
     {
-        var courses = await context.Courses
-            .Include(c => c.Department)
+        var courses = await context.CourseUnits
             .ToListAsync();
 
-        var mappedCourses = mapper.Map<List<CourseListDto>>(courses);
+        var mappedCourses = mapper.Map<List<UnitListDto>>(courses);
 
-        return ResponseDtoData<List<CourseListDto>>.SuccessResult(message: "Courses retrieved successfully",
+        return ResponseDtoData<List<UnitListDto>>.SuccessResult(message: "CourseUnits retrieved successfully",
             data: mappedCourses);
     }
 
-    public async Task<ResponseDtoData<CourseDto>> UpdateCourseAsync(int id, UpdateCourseDto courseDto)
+    public async Task<ResponseDtoData<UnitDto>> UpdateCourseAsync(int id, UpdateUnitDto courseDto)
     {
         try
         {
-            var course = await context.Courses.FirstOrDefaultAsync(c => c.Id == id);
+            var course = await context.CourseUnits.FirstOrDefaultAsync(c => c.Id == id);
 
             if (course == null)
             {
-                return ResponseDtoData<CourseDto>.ErrorResult(
+                return ResponseDtoData<UnitDto>.ErrorResult(
                     (int)HttpStatusCode.NotFound,
                     "Course not found"
                 );
             }
 
-            if (!string.IsNullOrWhiteSpace(courseDto.CourseCode))
-                course.CourseCode = courseDto.CourseCode;
+            if (!string.IsNullOrWhiteSpace(courseDto.UnitCode))
+                course.UnitCode = courseDto.UnitCode;
 
-            if (!string.IsNullOrWhiteSpace(courseDto.CourseName))
-                course.CourseName = courseDto.CourseName;
+            if (!string.IsNullOrWhiteSpace(courseDto.UnitName))
+                course.UnitName = courseDto.UnitName;
 
             course.UpdatedAt = DateTime.Now;
 
-            context.Courses.Update(course);
+            context.CourseUnits.Update(course);
             await context.SaveChangesAsync();
 
-            var updatedDto = mapper.Map<CourseDto>(course);
+            var updatedDto = mapper.Map<UnitDto>(course);
 
-            return ResponseDtoData<CourseDto>.SuccessResult(updatedDto, "Course updated successfully");
+            return ResponseDtoData<UnitDto>.SuccessResult(updatedDto, "Course updated successfully");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error updating course with ID {Id}", id);
-            return ResponseDtoData<CourseDto>.ErrorResult(
+            return ResponseDtoData<UnitDto>.ErrorResult(
                 (int)HttpStatusCode.InternalServerError,
                 $"An error occurred: {ex.Message}"
             );

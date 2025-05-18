@@ -96,12 +96,17 @@ public static class ServiceExtension
         services.AddScoped<IDepartmentService, DepartmentService>();
         services.AddScoped<IStudentCrudService, StudentCrudService>();
         services.AddScoped<ICourseService, CourseService>();
+        services.AddScoped<ICourseUnitService, CourseUnitService>();
         services.AddScoped<IProgrammeService, ProgrammeService>();
         services.AddScoped<IAcademicYearService, AcademicYearService>();
+        services.AddScoped<IClassroomService, ClassroomService>();
+        services.AddScoped<ITimetableService, TimetableService>();
+        
         //services.AddScoped<IStudentOperationsService, StudentOperationsService>();
 
         return services;
     }
+  
     public static IServiceCollection AddCorsConfiguration(this IServiceCollection services)
     {
         services.AddCors(options =>

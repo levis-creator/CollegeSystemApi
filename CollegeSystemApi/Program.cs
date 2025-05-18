@@ -1,5 +1,6 @@
 using CollegeSystemApi.Data;
 using CollegeSystemApi.Extensions;
+using CollegeSystemApi.Helper;
 using CollegeSystemApi.Models;
 using CollegeSystemApi.Models.Common;
 using Microsoft.AspNetCore.Identity;
@@ -20,7 +21,10 @@ builder.Services.AddCorsConfiguration();
 builder.Services.AddServices();
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddNewtonsoftJson(options =>
+{
+    options.SerializerSettings.Converters.Add(new DateOnlyJsonConverter());
+}); ;
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddEndpointsApiExplorer();
 

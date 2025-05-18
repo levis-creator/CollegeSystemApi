@@ -1,7 +1,8 @@
-﻿using CollegeSystemApi.Models.Entities;
+﻿
+using CollegeSystemApi.Models.Entities;
 
 namespace CollegeSystemApi.Services.Interfaces;
 
-public interface IAcademicYearService:IGenericServices<AcademicYear>
+public interface IAcademicYearService : IGenericServices<AcademicYear>
 {
 }
